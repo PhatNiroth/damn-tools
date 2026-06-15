@@ -269,6 +269,22 @@ async def clone_voice(
     return {"voice": voice}
 
 
+class CloneUpdate(BaseModel):
+    gender: str | None = None
+    label:  str | None = None
+
+
+@api.patch("/api/voices/clone/{voice_id}")
+def update_cloned_voice(voice_id: str, body: CloneUpdate):
+    """Fix a cloned voice's gender (or label) after it was recorded."""
+    voice = voice_clone.update_clone(
+        Path(voice_id).name, gender=body.gender, label=body.label
+    )
+    if voice is None:
+        raise HTTPException(404, "Cloned voice not found")
+    return {"voice": voice}
+
+
 @api.delete("/api/voices/clone/{voice_id}")
 def remove_cloned_voice(voice_id: str):
     if not voice_clone.delete_clone(Path(voice_id).name):

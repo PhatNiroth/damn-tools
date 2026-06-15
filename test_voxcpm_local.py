@@ -35,7 +35,29 @@ def main() -> int:
     p.add_argument("--voice", default="local_female",
                    help="Voice id: local_female, local_male, or a clone_* id.")
     p.add_argument("--out", default="voxcpm_local_test.wav", help="Output WAV path.")
+    p.add_argument("--list-voices", action="store_true",
+                   help="List available voice ids (incl. clones) and exit.")
+    p.add_argument("--set-gender", choices=["male", "female"],
+                   help="Fix the gender of the clone given by --voice, then exit.")
     args = p.parse_args()
+
+    if args.set_gender:
+        from pipeline import voice_clone
+        updated = voice_clone.update_clone(args.voice, gender=args.set_gender)
+        if updated is None:
+            print(f"[test] no such cloned voice: {args.voice}")
+            return 1
+        print(f"[test] updated {updated['id']} → gender={updated['gender']} "
+              f"({updated['label']})")
+        return 0
+
+    if args.list_voices:
+        from pipeline import tts
+        print("[test] available voices for this engine:")
+        for v in tts.list_voices():
+            tag = " (cloned)" if v.get("cloned") else ""
+            print(f"  {v['id']:24s}  {v.get('gender',''):6s}  {v.get('label','')}{tag}")
+        return 0
 
     print(f"[test] TTS_ENGINE = {os.environ['TTS_ENGINE']}")
     print(f"[test] model      = {os.environ.get('VOXCPM_LOCAL_MODEL', 'openbmb/VoxCPM2')}")

@@ -1,0 +1,81 @@
+x-app-env: &app-env
+  GEMINI_API_KEY: ${GEMINI_API_KEY}
+  REDIS_URL: redis://redis:6379/0
+  UPLOAD_DIR: /app/uploads
+  OUTPUT_DIR: /app/outputs
+  DATA_DIR: /app/data
+  WAV2LIP_DIR: /app/Wav2Lip
+  WAV2LIP_CHECKPOINT: /app/Wav2Lip/checkpoints/wav2lip_gan.pth
+  MAX_UPLOAD_MB: "500"
+  WHISPER_MODEL: ${WHISPER_MODEL:-small}
+  RETENTION_DAYS: ${RETENTION_DAYS:-30}
+  CORS_ORIGINS: ${CORS_ORIGINS:-*}
+  # Shared access token. Set this (and ideally a closed CORS_ORIGINS) before
+  # exposing the app beyond localhost — when set, all /api/* calls require it.
+  # Leave empty to disable auth (local dev).
+  APP_TOKEN: ${APP_TOKEN:-}
+  # TTS engine: gtts (default), voxcpm (needs VOXCPM_BASE_URL of a
+  # vLLM-Omni OpenAI-compatible endpoint serving openbmb/VoxCPM2),
+  # azure (Microsoft Azure AI Speech — needs AZURE_SPEECH_KEY + region), or
+  # gemini (Google AI Studio native TTS — reuses GEMINI_API_KEY, free tier,
+  # 30 prebuilt voices; low requests-per-minute limit so renders are slower)
+  TTS_ENGINE: ${TTS_ENGINE:-gtts}
+  VOXCPM_BASE_URL: ${VOXCPM_BASE_URL:-}
+  AZURE_SPEECH_KEY: ${AZURE_SPEECH_KEY:-}
+  AZURE_SPEECH_REGION: ${AZURE_SPEECH_REGION:-southeastasia}
+  BG_IDLE_DB: ${BG_IDLE_DB:-8}
+  BG_SPEECH_DB: ${BG_SPEECH_DB:-18}
+
+x-app-volumes: &app-volumes
+  - ./uploads:/app/uploads
+  - ./outputs:/app/outputs
+  - ./data:/app/data
+  - ./Wav2Lip:/app/Wav2Lip
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    # No external port binding — only accessible inside the Docker network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment: *app-env
+    volumes: *app-volumes
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    command: uvicorn main:api --host 0.0.0.0 --port 8000
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment: *app-env
+    volumes: *app-volumes
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A worker worker --loglevel=info --concurrency=2
+
+volumes:
+  redis-data:

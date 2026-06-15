@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DAI DUBBER — Khmer Edition</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a12;--panel:#11111f;--card:#181828;--border:#2a2a45;
+  --purple:#7c3aed;--purple2:#9d5cf6;--pink:#ec4899;
+  --green:#10b981;--cyan:#06b6d4;--yellow:#f59e0b;--red:#ef4444;
+  --text:#e2e8f0;--muted:#64748b;--muted2:#94a3b8;
+  --row-hover:#1a1a2e;--input-bg:#0d0d1a;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px}
+
+/* HEADER */
+header{display:flex;align-items:center;gap:10px;padding:0 16px;height:42px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--purple),var(--pink));border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:10px;color:#fff}
+.logo-text{font-weight:800;font-size:14px;letter-spacing:1px}
+.badge{font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;background:#1e1e35;color:var(--muted2);border:1px solid var(--border)}
+.badge.pro{color:var(--yellow);border-color:var(--yellow)}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:2px}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pill{display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:5px;padding:3px 9px;font-size:10px;color:var(--muted2)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* LAYOUT */
+.workspace{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:260px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border)}
+
+.sec{padding:10px 12px;border-bottom:1px solid var(--border)}
+.sec-title{font-size:9px;font-weight:700;color:var(--muted2);letter-spacing:1.5px;margin-bottom:8px}
+
+/* video player */
+.times{display:flex;justify-content:space-between;font-size:10px;color:var(--cyan);font-family:monospace;margin-bottom:6px}
+.scrubber{width:100%;height:4px;appearance:none;background:var(--border);border-radius:2px;cursor:pointer;margin-bottom:8px}
+.scrubber::-webkit-slider-thumb{appearance:none;width:11px;height:11px;border-radius:50%;background:var(--purple2)}
+.ctrls{display:flex;align-items:center;gap:5px;margin-bottom:8px}
+.cbtn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px}
+.cbtn:hover{background:var(--purple)}
+.vol{width:55px;height:3px;appearance:none;background:var(--border);border-radius:2px;cursor:pointer;margin-left:auto}
+.vol::-webkit-slider-thumb{appearance:none;width:9px;height:9px;border-radius:50%;background:var(--purple2)}
+.vid-box{width:100%;height:85px;background:#0d0d1a;border:1px dashed var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.vid-box video{width:100%;height:100%;object-fit:cover;display:none}
+.vid-placeholder{font-size:10px;color:var(--muted)}
+
+/* step buttons */
+.sbtn{width:100%;padding:8px;background:var(--card);border:1px solid var(--border);border-radius:5px;color:var(--muted2);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:6px;transition:border-color .15s,color .15s}
+.sbtn:hover{border-color:var(--purple2);color:var(--text)}
+.sbtn.active{border-color:var(--purple);color:var(--purple2)}
+.sbtn .step-num{width:18px;height:18px;border-radius:50%;background:var(--purple);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sbtn.done .step-num{background:var(--green)}
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.render-btn{width:100%;padding:11px;background:linear-gradient(90deg,var(--purple),var(--pink));border:none;border-radius:7px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-top:4px}
+.render-btn:hover{opacity:.9}
+.render-btn:disabled{opacity:.4;cursor:not-allowed}
+.status-bar{padding:7px 12px;font-size:9px;color:var(--muted);font-family:monospace;margin-top:auto;border-top:1px solid var(--border)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* GRID HEADER */
+.grid-hdr{padding:9px 14px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+.grid-title{font-size:13px;font-weight:700}
+.grid-meta{font-size:10px;color:var(--muted2)}
+.voice-set{margin-left:auto;display:flex;align-items:center;gap:6px}
+.vs-label{font-size:10px;color:var(--muted2);font-weight:600}
+.vs-btn{padding:4px 11px;background:transparent;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer}
+.vs-male{border:1px solid var(--cyan);color:var(--cyan)}
+.vs-male:hover{background:var(--cyan);color:#000}
+.vs-female{border:1px solid var(--pink);color:var(--pink)}
+.vs-female:hover{background:var(--pink);color:#fff}
+
+/* TABLE */
+.table-wrap{flex:1;overflow:auto}
+.table-wrap::-webkit-scrollbar{width:4px;height:4px}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--border)}
+table{width:100%;border-collapse:collapse;min-width:900px}
+thead th{position:sticky;top:0;background:var(--panel);padding:7px 10px;font-size:9px;font-weight:700;color:var(--muted2);letter-spacing:1px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;z-index:2}
+tbody tr{border-bottom:1px solid #15152a;cursor:pointer;transition:background .1s}
+tbody tr:hover{background:var(--row-hover)}
+tbody tr.sel{background:#1a0a2e}
+tbody td{padding:6px 10px;vertical-align:middle}
+.chk{width:14px;height:14px;accent-color:var(--purple);cursor:pointer}
+.time-badge{font-family:monospace;font-size:10px;color:var(--cyan);background:var(--input-bg);border:1px solid var(--border);border-radius:4px;padding:2px 6px;white-space:nowrap;cursor:pointer}
+.time-badge:hover{border-color:var(--purple2)}
+.zh-text{font-size:11px;color:var(--muted2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.km-cell{background:var(--input-bg);border:1px solid var(--border);border-radius:4px;padding:4px 7px;color:var(--text);font-size:12px;width:100%;min-width:160px;resize:none;overflow:hidden}
+.km-cell:focus{outline:none;border-color:var(--purple2)}
+.gender-btns{display:flex;gap:3px}
+.gbtn{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;transition:all .1s}
+.gbtn-auto{border-color:var(--purple);color:var(--purple)}
+.gbtn-auto.on{background:var(--purple);color:#fff}
+.gbtn-female{border-color:var(--pink);color:var(--pink)}
+.gbtn-female.on{background:var(--pink);color:#fff}
+.gbtn-male{border-color:var(--cyan);color:var(--cyan)}
+.gbtn-male.on{background:var(--cyan);color:#000}
+.audio-cell{display:flex;align-items:center;gap:4px}
+.gen-btn{padding:3px 9px;background:var(--purple);border:none;border-radius:4px;color:#fff;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.gen-btn:hover{background:var(--purple2)}
+.gen-btn.done{background:var(--green);color:#000}
+.gen-btn.busy{background:var(--muted);cursor:not-allowed}
+.del-btn{width:24px;height:24px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.del-btn:hover{border-color:var(--red);color:var(--red)}
+.mini-audio{height:20px;width:90px}
+
+/* GRID FOOTER */
+.grid-footer{padding:7px 14px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;gap:7px;flex-shrink:0}
+.add-btn{padding:5px 12px;background:transparent;border:1px dashed var(--border);border-radius:4px;color:var(--muted2);font-size:10px;cursor:pointer}
+.add-btn:hover{border-color:var(--purple2);color:var(--text)}
+.actions{margin-left:auto;display:flex;gap:5px}
+.act-btn{padding:5px 12px;border:none;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer}
+.act-transcribe{background:var(--green);color:#000}
+.act-translate{background:linear-gradient(90deg,#1a3a60,#0e4a7a);border:1px solid var(--cyan);color:var(--cyan)}
+.act-engsub{background:#14241a;border:1px solid var(--green);color:var(--green)}
+.act-gensel{background:linear-gradient(90deg,var(--purple),var(--pink));color:#fff}
+.act-clr{background:#2a0a0a;border:1px solid var(--red);color:var(--red)}
+.mode-btn.active{background:linear-gradient(90deg,var(--purple),var(--pink));color:#fff;border-color:transparent}
+
+/* TIMELINE */
+.tl-panel{height:130px;flex-shrink:0;background:var(--panel);border-top:1px solid var(--border);display:flex;flex-direction:column}
+.tl-hdr{display:flex;align-items:center;gap:7px;padding:5px 12px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.tl-lbl{font-size:9px;font-weight:700;color:var(--muted2);letter-spacing:1px}
+.tl-time{font-family:monospace;font-size:10px;color:var(--cyan);background:var(--card);border:1px solid var(--border);border-radius:3px;padding:2px 7px}
+.shift-btns{display:flex;gap:2px}
+.shbtn{padding:2px 7px;background:var(--card);border:1px solid var(--border);border-radius:3px;color:var(--muted2);font-size:10px;cursor:pointer}
+.shbtn:hover{border-color:var(--purple2);color:var(--text)}
+.zoom-wrap{display:flex;align-items:center;gap:5px;margin-left:auto}
+.zoom-sl{width:70px;height:3px;appearance:none;background:var(--border);border-radius:2px;cursor:pointer}
+.zoom-sl::-webkit-slider-thumb{appearance:none;width:9px;height:9px;border-radius:50%;background:var(--purple2)}
+.tl-body{flex:1;overflow-x:auto;overflow-y:hidden;position:relative}
+.tl-body::-webkit-scrollbar{height:3px}
+.tl-body::-webkit-scrollbar-thumb{background:var(--border)}
+.tl-canvas{height:100%;position:relative;min-width:100%}
+.tl-ruler{height:18px;background:var(--card);border-bottom:1px solid var(--border);position:relative}
+.tl-mark{position:absolute;top:0;height:100%;border-left:1px solid var(--border);font-size:8px;color:var(--muted);padding:3px 2px;pointer-events:none;white-space:nowrap}
+.tl-tracks{position:relative}
+.tl-track{height:40px;display:flex;align-items:center;border-bottom:1px solid #15152a;position:relative}
+.tl-track-lbl{width:70px;flex-shrink:0;padding:0 8px;font-size:8px;font-weight:700;color:var(--muted2);letter-spacing:.5px;background:var(--panel);border-right:1px solid var(--border);height:100%;display:flex;align-items:center}
+.tl-content{flex:1;position:relative;height:100%;overflow:hidden}
+.tl-seg{position:absolute;top:5px;height:28px;background:linear-gradient(135deg,#7c3aed,#9d5cf6);border-radius:4px;cursor:pointer;border:1px solid #a78bfa;display:flex;align-items:center;padding:0 5px;font-size:8px;color:#fff;overflow:hidden;white-space:nowrap;min-width:3px;user-select:none}
+.tl-seg:hover{opacity:.8}
+.tl-seg.sel{border-color:#fff;box-shadow:0 0 6px rgba(167,139,250,.5)}
+.tl-seg.male{background:linear-gradient(135deg,#0e4a7a,#06b6d4)}
+.tl-seg.female{background:linear-gradient(135deg,#831843,#ec4899)}
+.tl-ph{position:absolute;top:0;width:2px;background:var(--red);pointer-events:none;z-index:10}
+
+/* PROGRESS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.prog-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:26px 30px;width:360px;text-align:center}
+.prog-card h3{font-size:14px;margin-bottom:5px}
+.prog-stage{font-size:11px;color:var(--muted2);margin-bottom:14px}
+.prog-bg{background:var(--border);border-radius:999px;height:7px;overflow:hidden;margin-bottom:10px}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--pink));border-radius:999px;transition:width .4s;width:0}
+.prog-pct{font-size:11px;color:var(--muted2);font-family:monospace}
+
+.toast{position:fixed;bottom:18px;right:18px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:9px 14px;font-size:11px;z-index:2000;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+input[type=file]{display:none}
+
+/* PROJECTS */
+.proj-item{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:5px;margin-bottom:5px;cursor:pointer;transition:border-color .15s}
+.proj-item:hover{border-color:var(--purple2)}
+.proj-item.current{border-color:var(--purple)}
+.proj-info{flex:1;min-width:0}
+.proj-name{font-size:10px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-meta{font-size:9px;color:var(--muted)}
+.proj-del{width:20px;height:20px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:10px;flex-shrink:0}
+.proj-del:hover{border-color:var(--red);color:var(--red)}
+.proj-empty{font-size:10px;color:var(--muted);padding:4px 2px}
+
+/* failed translation highlight */
+.km-cell.failed{border-color:var(--red)}
+
+/* voice select */
+.voice-sel{background:var(--input-bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;padding:4px 5px;cursor:pointer;min-width:110px}
+.voice-sel:focus{outline:none;border-color:var(--purple2)}
+.voice-sel option,.voice-sel optgroup{background:var(--panel);color:var(--text)}
+#voice-test-btn.busy{background:var(--muted);pointer-events:none}
+
+/* speaker badges + per-speaker voice panel */
+.spk-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.spk-man{background:rgba(80,140,255,.18);color:#9cc1ff;border:1px solid rgba(80,140,255,.35)}
+.spk-girl{background:rgba(255,110,180,.18);color:#ffaad4;border:1px solid rgba(255,110,180,.35)}
+.spk-none{color:var(--muted);font-size:10px}
+.speaker-panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin:6px 0 4px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.speaker-panel .sp-title{font-size:10px;font-weight:700;color:var(--purple2);letter-spacing:.5px;margin-right:4px}
+.sp-item{display:flex;align-items:center;gap:5px;background:var(--input-bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px}
+.sp-item .sp-count{font-size:9px;color:var(--muted)}
+
+/* subtitle style row */
+.style-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted2)}
+.style-row input[type=number]{width:48px;background:var(--input-bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 5px;font-size:10px}
+.style-row input[type=color]{width:28px;height:22px;background:none;border:1px solid var(--border);border-radius:4px;padding:1px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">DAI</div>
+  <div>
+    <div style="display:flex;align-items:center;gap:5px">
+      <span class="logo-text">DAI DUBBER</span>
+      <span class="badge">FREE</span><span class="badge pro">PRO</span>
+    </div>
+    <div class="logo-sub">KHMER EDITION BY DAICODING</div>
+  </div>
+  <div class="hdr-right">
+    <div class="pill"><span class="dot"></span>FastAPI / Local</div>
+    <div class="pill" id="seg-pill">Segments: 0</div>
+  </div>
+</header>
+
+<div class="workspace">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+
+  <!-- Video player -->
+  <div class="sec">
+    <div class="sec-title">VIDEO PLAYER</div>
+    <div class="times"><span id="cur-t">00:00.00</span><span id="dur-t">00:00.00</span></div>
+    <input type="range" class="scrubber" id="scrubber" min="0" max="100" value="0" step="0.01"/>
+    <div class="ctrls">
+      <button class="cbtn" id="btn-play">▶</button>
+      <button class="cbtn" id="btn-stop">■</button>
+      <span style="font-size:11px;color:var(--muted2);margin-left:4px">🔊</span>
+      <input type="range" class="vol" id="vol" min="0" max="100" value="80"/>
+    </div>
+    <div class="vid-box" id="vid-box">
+      <span class="vid-placeholder">No video loaded</span>
+      <video id="main-vid" preload="metadata"></video>
+      <audio id="preview-audio" preload="auto" style="display:none"></audio>
+    </div>
+  </div>
+
+  <!-- Steps -->
+  <div class="sec">
+    <div class="sec-title">WORKFLOW STEPS</div>
+
+    <!-- Source-language mode -->
+    <div class="mode-row" style="display:flex;gap:5px;margin-bottom:8px">
+      <button class="sbtn mode-btn active" id="mode-zh-btn" style="flex:1;margin-bottom:0;font-size:10px" onclick="setSrcMode('zh')" title="Transcribe Chinese, then translate Chinese → Khmer">汉 Chinese direct</button>
+      <button class="sbtn mode-btn" id="mode-en-btn" style="flex:1;margin-bottom:0;font-size:10px" onclick="setSrcMode('en')" title="Whisper transcribes to English first, then English → Khmer (usually better)">EN Via English</button>
+    </div>
+
+    <!-- Step 1: Load video -->
+    <button class="sbtn" id="step1-btn" onclick="document.getElementById('vid-input').click()">
+      <span class="step-num">1</span> Load Video
+    </button>
+    <input type="file" id="vid-input" accept="video/*" onchange="onVideoSelected(this)"/>
+
+    <!-- Step 2: Get subtitles -->
+    <button class="sbtn" id="step2a-btn" onclick="document.getElementById('srt-input').click()" disabled>
+      <span class="step-num">2</span> Import Chinese SRT
+    </button>
+    <input type="file" id="srt-input" accept=".srt" onchange="onSRTImport(this)"/>
+
+    <button class="sbtn" id="step2b-btn" onclick="autoExtractSRT()" disabled>
+      <span class="step-num">2</span> <span id="step2b-label">Auto Extract (Whisper)</span>
+    </button>
+
+    <button class="sbtn" id="step2c-btn" onclick="detectSubs()" disabled title="Read the English subtitles burned into the video with OCR (more accurate than transcribing audio), then translate English → Khmer">
+      <span class="step-num">2</span> 🔍 Detect Subs from Video (OCR)
+    </button>
+
+    <!-- Step 3: Translate -->
+    <button class="sbtn" id="step3-btn" onclick="translateAll()" disabled>
+      <span class="step-num">3</span> Translate → Khmer
+    </button>
+
+    <!-- Export -->
+    <div class="dual" style="margin-top:2px">
+      <button class="sbtn" style="margin-bottom:0;font-size:10px" onclick="exportSRT()">⬇ Export SRT</button>
+      <button class="sbtn" style="margin-bottom:0;font-size:10px" onclick="clearAll()">🗑 Clear</button>
+    </div>
+  </div>
+
+  <!-- Voice settings -->
+  <div class="sec">
+    <div class="sec-title">VOICE SETTINGS</div>
+    <div style="display:flex;gap:5px;margin-bottom:6px">
+      <select id="voice-pick" class="voice-sel" style="flex:1"></select>
+      <button class="cbtn" id="voice-test-btn" title="Test this voice" onclick="testVoice()">▶</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <button class="sbtn" style="flex:1;margin-bottom:0;font-size:10px" onclick="applyVoice('checked')">Apply to checked</button>
+      <button class="sbtn" style="flex:1;margin-bottom:0;font-size:10px" onclick="applyVoice('all')">Apply to all</button>
+    </div>
+    <button class="sbtn" onclick="setAllGender('auto')">⚡ Auto-detect per segment</button>
+    <button class="sbtn" onclick="toggleClonePanel()">🎙 Clone a voice (record)</button>
+
+    <!-- Voice-cloning recorder -->
+    <div id="clone-panel" style="display:none;border:1px solid var(--border);border-radius:6px;padding:9px;margin-top:4px;background:var(--card)">
+      <div style="font-size:10px;color:var(--muted2);line-height:1.5;margin-bottom:7px">
+        Read the line below aloud, then record ~10–20s of clear speech. Your voice
+        is cloned for Khmer dubbing (VoxCPM engine).
+      </div>
+      <div style="font-size:11px;color:var(--text);background:var(--input-bg);border-radius:4px;padding:6px;margin-bottom:7px">
+        <span id="clone-script">នេះជាសំឡេងរបស់ខ្ញុំសម្រាប់ការបញ្ចូលសំឡេងជាភាសាខ្មែរ។</span>
+      </div>
+      <div style="display:flex;gap:5px;margin-bottom:7px">
+        <button class="sbtn" id="clone-rec-btn" style="margin-bottom:0;flex:1" onclick="toggleRecord()">● Record</button>
+        <button class="cbtn" id="clone-play-btn" title="Play recording" onclick="playClone()" disabled>▶</button>
+      </div>
+      <input id="clone-label" class="voice-sel" style="width:100%;box-sizing:border-box;margin-bottom:6px" placeholder="Voice name (e.g. My voice)"/>
+      <select id="clone-gender" class="voice-sel" style="width:100%;box-sizing:border-box;margin-bottom:6px">
+        <option value="female">♀ Female</option>
+        <option value="male">♂ Male</option>
+      </select>
+      <textarea id="clone-text" class="voice-sel" rows="2" style="width:100%;box-sizing:border-box;margin-bottom:6px;resize:vertical" placeholder="Transcript of what you said"></textarea>
+      <button class="sbtn" style="margin-bottom:6px" id="clone-save-btn" onclick="saveClone()" disabled>💾 Save cloned voice</button>
+      <div id="clone-list" style="font-size:10px;color:var(--muted2)"></div>
+    </div>
+  </div>
+
+  <!-- Render -->
+  <div class="sec">
+    <label style="display:flex;align-items:center;gap:7px;padding:7px 4px;cursor:pointer;font-size:11px;color:var(--muted2)">
+      <input type="checkbox" id="burn-subs" style="accent-color:var(--purple);width:14px;height:14px" onchange="document.getElementById('sub-style-row').style.display=this.checked?'flex':'none'"/>
+      🔤 Burn Khmer subtitles into video
+    </label>
+    <div class="style-row" id="sub-style-row" style="display:none">
+      Size <input type="number" id="sub-size" min="10" max="72" value="22"/>
+      Color <input type="color" id="sub-color" value="#ffffff"/>
+      Outline <input type="number" id="sub-outline" min="0" max="6" value="2"/>
+      Height <input type="number" id="sub-margin" min="0" max="400" value="40" title="Distance from the bottom edge (px). Higher = subtitle sits higher up."/>
+    </div>
+    <label style="display:flex;align-items:center;gap:7px;padding:7px 4px;cursor:pointer;font-size:11px;color:var(--muted2)" title="Cover the original burned-in (Chinese/English) subtitles with a solid bar. Defaults to a full-width band across the bottom of the frame.">
+      <input type="checkbox" id="remove-subs" style="accent-color:var(--purple);width:14px;height:14px" onchange="document.getElementById('remove-style-row').style.display=this.checked?'flex':'none'"/>
+      🟥 Cover original subtitles with a bar
+    </label>
+    <div class="style-row" id="remove-style-row" style="display:none" title="Bar position/size as a percentage of the frame (origin = top-left).">
+      X <input type="number" id="rm-x" min="0" max="100" value="0"/>
+      Y <input type="number" id="rm-y" min="0" max="100" value="82"/>
+      W <input type="number" id="rm-w" min="0" max="100" value="100"/>
+      H <input type="number" id="rm-h" min="0" max="100" value="16"/>
+      Color <input type="color" id="rm-color" value="#ffffff"/>
+    </div>
+    <label style="display:flex;align-items:center;gap:7px;padding:7px 4px;cursor:pointer;font-size:11px;color:var(--muted2)" title="Drop the original Chinese audio entirely — the final video carries only the Khmer voice-over (no ducked background)">
+      <input type="checkbox" id="remove-audio" checked style="accent-color:var(--purple);width:14px;height:14px"/>
+      🔇 Remove original sound (Khmer voice only)
+    </label>
+    <button class="render-btn" id="preview-btn" onclick="previewDub()" disabled
+            title="Generate the Khmer voice and mix it over the original — without re-encoding the video. Plays in the player so you can check quality before the full render."
+            style="background:linear-gradient(90deg,#0ea5e9,#22c55e);margin-bottom:6px">
+      🎧 PREVIEW DUB (សាកល្បងស្តាប់)
+    </button>
+    <button class="render-btn" id="render-btn" onclick="finalRender()" disabled>
+      🚀 FINAL RENDER (ដំណើរការផ្សាយ)
+    </button>
+  </div>
+
+  <!-- Projects -->
+  <div class="sec">
+    <div class="sec-title">PROJECTS (saved automatically)</div>
+    <div id="proj-list"><div class="proj-empty">No saved projects</div></div>
+  </div>
+
+  <div class="status-bar">
+    <div><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:4px"></span>LOCAL_BUFFER :: ACTIVE</div>
+    <div id="latency-bar">AUDIO_MIXER_LATENCY: ready</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- Grid header -->
+  <div class="grid-hdr">
+    <div>
+      <div class="grid-title">SUBTITLE DATA GRID (ប្រាយការណ៍ខ្មែរ)</div>
+      <div class="grid-meta">TOTAL: <span id="total-c">0</span> | CHECKED: <span id="checked-c">0</span></div>
+    </div>
+    <div class="voice-set">
+      <span class="vs-label">SET CHECKED TO:</span>
+      <button class="vs-btn vs-male" onclick="setCheckedGender('male')">♂ MALE</button>
+      <button class="vs-btn vs-female" onclick="setCheckedGender('female')">♀ FEMALE</button>
+    </div>
+  </div>
+
+  <!-- Per-speaker voice assignment — populated after speaker detection.
+       Pick one voice per detected speaker (Man 1/2/3 / Girl) and it applies to
+       every line that speaker says. -->
+  <div id="speaker-panel" class="speaker-panel" style="display:none"></div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table id="sub-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="chk-all" onchange="toggleAll(this)"/></th>
+          <th>#</th>
+          <th>START</th>
+          <th>END</th>
+          <th id="orig-col-hdr">CHINESE (original)</th>
+          <th>KHMER SUBTITLE (editable)</th>
+          <th>SPEAKER</th>
+          <th>VOICE</th>
+          <th>AUDIO</th>
+        </tr>
+      </thead>
+      <tbody id="sub-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="grid-footer">
+    <button class="add-btn" onclick="addRow()">+ ADD ROW</button>
+    <div class="actions">
+      <button class="act-btn act-transcribe" onclick="autoExtractSRT()">🎙 TRANSCRIBE</button>
+      <button class="act-btn act-transcribe" onclick="detectSubs()">🔍 DETECT SUBS (OCR)</button>
+      <button class="act-btn act-translate" onclick="translateAll()">🌐 TRANSLATE ALL</button>
+      <button class="act-btn act-engsub" onclick="showFullEnglish()">📖 FULL ENGLISH SUB</button>
+      <button class="act-btn act-gensel" onclick="genSelected()">✨ GEN SELECTED</button>
+      <button class="act-btn act-clr" onclick="clearVoices()">🔇 CLEAR VOICES</button>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="tl-panel">
+    <div class="tl-hdr">
+      <span class="tl-lbl">TIMELINE</span>
+      <span class="tl-time" id="tl-time">00:00.00 / 00:00.00</span>
+      <span style="font-size:10px;color:var(--muted2)">SHIFT:</span>
+      <div class="shift-btns">
+        <button class="shbtn" onclick="shiftSel(-0.5)">-0.5s</button>
+        <button class="shbtn" onclick="shiftSel(-0.1)">-0.1s</button>
+        <button class="shbtn" onclick="shiftSel(+0.1)">+0.1s</button>
+        <button class="shbtn" onclick="shiftSel(+0.5)">+0.5s</button>
+      </div>
+      <div class="zoom-wrap">
+        🔍
+        <input type="range" class="zoom-sl" id="zoom-sl" min="100" max="2000" step="50" value="500" oninput="setZoom(this)"/>
+        <span id="zoom-val" style="font-size:10px;color:var(--muted2);font-family:monospace;min-width:34px">500%</span>
+      </div>
+    </div>
+    <div class="tl-body" id="tl-body">
+      <div class="tl-canvas" id="tl-canvas" style="width:500%">
+        <div class="tl-ruler" id="tl-ruler"></div>
+        <div class="tl-tracks">
+          <div class="tl-track">
+            <div class="tl-track-lbl">T1: SUBTITLES</div>
+            <div class="tl-content" id="tl-sub-track"></div>
+          </div>
+          <div class="tl-track">
+            <div class="tl-track-lbl">A1: KHMER VOICE</div>
+            <div class="tl-content" id="tl-voice-track"></div>
+          </div>
+        </div>
+        <div class="tl-ph" id="tl-ph" style="left:0;height:80px"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /workspace -->
+
+<!-- Progress overlay -->
+<div class="overlay" id="overlay">
+  <div class="prog-card">
+    <h3 id="prog-title">Processing…</h3>
+    <div class="prog-stage" id="prog-stage">Please wait</div>
+    <div class="prog-bg"><div class="prog-fill" id="prog-fill"></div></div>
+    <div class="prog-pct" id="prog-pct">0%</div>
+  </div>
+</div>
+
+<!-- Full English subtitle modal -->
+<div class="overlay" id="eng-overlay">
+  <div class="prog-card" style="width:min(640px,90vw);text-align:left">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h3 style="margin:0">📖 Full English Subtitle</h3>
+      <button class="cbtn" onclick="document.getElementById('eng-overlay').classList.remove('show')" title="Close">✕</button>
+    </div>
+    <div style="font-size:10px;color:var(--muted2);margin-bottom:8px">Whole-video transcript translated to English.</div>
+    <textarea id="eng-full-text" readonly style="width:100%;height:46vh;background:var(--input-bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;line-height:1.6;padding:10px;resize:vertical"></textarea>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <button class="sbtn" style="margin:0;flex:1" onclick="copyFullEnglish()">📋 Copy text</button>
+      <button class="sbtn" style="margin:0;flex:1" onclick="downloadFullEnglish()">⬇ Download .txt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── AUTH ───────────────────────────────────────────────────────────────────
+// The API may require a shared access token (APP_TOKEN). We inject it as a
+// header on every fetch and mirror it into a cookie so browser-native GETs
+// (the <video src>, download links / window.open) carry it too. When the API
+// runs without a token configured, no 401 ever fires and the user is never
+// prompted — auth is effectively transparent in local dev.
+let APP_TOKEN = localStorage.getItem('dai_token') || '';
+
+function _applyToken(t) {
+  APP_TOKEN = t || '';
+  if (APP_TOKEN) {
+    localStorage.setItem('dai_token', APP_TOKEN);
+    // Session cookie, path=/ so media/download GETs include it. SameSite=Strict
+    // since the UI is same-origin.
+    document.cookie = 'dai_token=' + encodeURIComponent(APP_TOKEN) + '; path=/; SameSite=Strict';
+  }
+}
+_applyToken(APP_TOKEN);
+
+function _promptToken(msg) {
+  const t = window.prompt(msg || 'Access token required:', '');
+  if (t) _applyToken(t.trim());
+  return !!t;
+}
+
+(function patchFetch() {
+  const orig = window.fetch.bind(window);
+  window.fetch = async function (input, init) {
+    init = init || {};
+    if (APP_TOKEN) {
+      const h = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
+      h.set('X-API-Token', APP_TOKEN);
+      init.headers = h;
+    }
+    let res = await orig(input, init);
+    if (res.status === 401) {
+      // Token missing or wrong — prompt once and retry the request.
+      if (_promptToken('This server requires an access token. Enter it:')) {
+        const h = new Headers(init.headers || {});
+        h.set('X-API-Token', APP_TOKEN);
+        init.headers = h;
+        res = await orig(input, init);
+      }
+    }
+    return res;
+  };
+})();
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let segs = [];          // [{start,end,text,khmer,gender,audioUrl,checked}]
+let selIdx = null;
+let videoFilename = null;
+let videoJobId    = null;
+let lastRenderUrl = null;   // URL of the most recent full dubbed render (for playback/download)
+let previewMode = false;    // true while playing an audio-only dub preview (video muted, sound from <audio>)
+let duration = 0;
+let projectId   = null;
+let projectName = '';
+let srcMode = 'zh';     // 'zh' = transcribe Chinese direct, 'en' = Whisper→English pivot
+let VOICE_LIST  = [];   // [{id,label,gender}] from /api/voices
+const vid = document.getElementById('main-vid');
+
+// ─── VOICES ──────────────────────────────────────────────────────────────────
+const TEST_TEXT_FALLBACK = 'នេះជាសំឡេងសាកល្បងសម្រាប់ការបញ្ចូលសំឡេង';  // "this is a test voice"
+
+// First concrete voice id of the given gender for the ACTIVE engine (gemini,
+// azure, voxcpm or gtts). Engine-specific ids (e.g. gtts "male_1" vs gemini
+// "Puck") must never be hardcoded — they're resolved from the loaded list.
+function defaultVoiceFor(gender) {
+  if (gender === 'auto' || !gender) return 'auto';
+  return VOICE_LIST.find(v => v.gender === gender && !v.cloned)?.id
+      || VOICE_LIST.find(v => v.gender === gender)?.id
+      || 'auto';
+}
+function segVoice(seg) {
+  // A saved voice from a different engine won't be in this engine's list;
+  // fall back to a same-gender default so the <select> still matches an option.
+  if (seg.voice && VOICE_LIST.some(v => v.id === seg.voice)) return seg.voice;
+  return defaultVoiceFor(seg.gender);
+}
+function voiceGender(voiceId) {
+  if (voiceId === 'auto') return 'auto';
+  return VOICE_LIST.find(v => v.id === voiceId)?.gender || 'female';
+}
+function voiceOptions(selected) {
+  let html = `<option value="auto"${selected==='auto'?' selected':''}>⚡ Auto</option>`;
+  for (const g of ['male','female']) {
+    const opts = VOICE_LIST.filter(v => v.gender === g)
+      .map(v => `<option value="${v.id}"${selected===v.id?' selected':''}>${v.cloned?'🎙':(g==='male'?'♂':'♀')} ${v.label}</option>`)
+      .join('');
+    if (opts) html += `<optgroup label="${g==='male'?'Male voices':'Female voices'}">${opts}</optgroup>`;
+  }
+  return html;
+}
+
+// ─── SPEAKERS (detected per segment by the diarizer) ──────────────────────────
+const SPEAKER_LABELS = {man_1:'Man 1', man_2:'Man 2', man_3:'Man 3', girl:'Girl'};
+function speakerGender(spk) { return spk === 'girl' ? 'female' : 'male'; }
+function speakerLabel(spk)  { return SPEAKER_LABELS[spk] || spk; }
+function speakerBadge(seg) {
+  if (!seg.speaker) return '<span class="spk-none">—</span>';
+  const cls = seg.speaker === 'girl' ? 'spk-girl' : 'spk-man';
+  return `<span class="spk-badge ${cls}">${speakerLabel(seg.speaker)}</span>`;
+}
+// Distinct speakers present, in a stable order (man_1, man_2, man_3, girl).
+function distinctSpeakers() {
+  const order = ['man_1','man_2','man_3','girl'];
+  const present = new Set(segs.map(s => s.speaker).filter(Boolean));
+  return order.filter(s => present.has(s));
+}
+// Assign a voice to every segment of one speaker (the bulk-apply the user wants).
+function setSpeakerVoice(spk, voiceId) {
+  const g = voiceGender(voiceId);
+  let n = 0;
+  segs.forEach(s => {
+    if (s.speaker === spk) { s.voice = voiceId; s.gender = g; s.audioUrl = null; n++; }
+  });
+  renderTable(); renderTimeline(); scheduleSave();
+  toast(`${speakerLabel(spk)} → voice applied to ${n} segment${n===1?'':'s'}`, 'ok');
+}
+function renderSpeakerPanel() {
+  const panel = document.getElementById('speaker-panel');
+  const speakers = distinctSpeakers();
+  if (!speakers.length) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+  panel.style.display = 'flex';
+  let html = '<span class="sp-title">🎭 SPEAKER VOICES</span>';
+  for (const spk of speakers) {
+    const segsFor = segs.filter(s => s.speaker === spk);
+    // The speaker's current voice = the voice shared by its segments (first one).
+    const cur = segVoice(segsFor[0]);
+    const cls = spk === 'girl' ? 'spk-girl' : 'spk-man';
+    html += `<div class="sp-item">
+      <span class="spk-badge ${cls}">${speakerLabel(spk)}</span>
+      <span class="sp-count">${segsFor.length}×</span>
+      <select class="voice-sel" onchange="setSpeakerVoice('${spk}', this.value)">${voiceOptions(cur)}</select>
+    </div>`;
+  }
+  panel.innerHTML = html;
+}
+async function loadVoices() {
+  try {
+    const d = await (await fetch('/api/voices')).json();
+    VOICE_LIST = d.voices || [];
+    const pick = document.getElementById('voice-pick');
+    pick.innerHTML = voiceOptions(VOICE_LIST.find(v=>v.gender==='male')?.id || 'auto');
+    pick.querySelector('option[value=auto]')?.remove();  // tester needs a concrete voice
+  } catch(e) { /* voices are static; retry on next load */ }
+}
+// Pull a readable message out of an error response: FastAPI sends
+// {"detail": "..."} so prefer that over the raw JSON body.
+async function errText(r) {
+  const body = await r.text();
+  try { return JSON.parse(body).detail || body; } catch { return body; }
+}
+let testAudio = null;
+async function testVoice() {
+  const voiceId = document.getElementById('voice-pick').value;
+  const btn = document.getElementById('voice-test-btn');
+  const sample = segs.find(s => s.khmer)?.khmer || TEST_TEXT_FALLBACK;
+  btn.classList.add('busy'); btn.textContent = '…';
+  try {
+    const r = await fetch('/api/tts', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text: sample, voice: voiceId, gender: voiceGender(voiceId)}),
+    });
+    if (!r.ok) throw new Error(await errText(r));
+    if (testAudio) testAudio.pause();
+    testAudio = new Audio(URL.createObjectURL(await r.blob()));
+    testAudio.play();
+  } catch(e) { toast('Voice test failed: '+e.message,'err'); }
+  btn.classList.remove('busy'); btn.textContent = '▶';
+}
+function applyVoice(scope) {
+  if (!segs.length) { toast('No segments','err'); return; }
+  const voiceId = document.getElementById('voice-pick').value;
+  const g = voiceGender(voiceId);
+  const targets = scope === 'checked' ? segs.filter(s=>s.checked) : segs;
+  if (!targets.length) { toast('No checked rows','err'); return; }
+  targets.forEach(s => { s.voice = voiceId; s.gender = g; s.audioUrl = null; });
+  renderTable(); renderTimeline(); scheduleSave();
+  toast(`Voice applied to ${targets.length} segments`,'ok');
+}
+
+// ─── VOICE CLONING (record a reference clip) ─────────────────────────────────
+let mediaRecorder = null, recChunks = [], cloneBlob = null, cloneAudio = null;
+
+function toggleClonePanel() {
+  const p = document.getElementById('clone-panel');
+  const show = p.style.display === 'none';
+  p.style.display = show ? 'block' : 'none';
+  if (show) {
+    if (!document.getElementById('clone-text').value)
+      document.getElementById('clone-text').value = document.getElementById('clone-script').textContent.trim();
+    renderCloneList();
+  }
+}
+
+async function toggleRecord() {
+  const btn = document.getElementById('clone-rec-btn');
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia) { toast('Mic not available in this browser','err'); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    recChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size) recChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      cloneBlob = new Blob(recChunks, {type: mediaRecorder.mimeType || 'audio/webm'});
+      btn.textContent = '● Record again';
+      btn.classList.remove('busy');
+      document.getElementById('clone-play-btn').disabled = false;
+      document.getElementById('clone-save-btn').disabled = false;
+      toast('Recording captured','ok');
+    };
+    mediaRecorder.start();
+    btn.textContent = '■ Stop';
+    btn.classList.add('busy');
+  } catch(e) { toast('Mic permission denied','err'); }
+}
+
+function playClone() {
+  if (!cloneBlob) return;
+  if (cloneAudio) cloneAudio.pause();
+  cloneAudio = new Audio(URL.createObjectURL(cloneBlob));
+  cloneAudio.play();
+}
+
+async function saveClone() {
+  if (!cloneBlob) { toast('Record something first','err'); return; }
+  const btn = document.getElementById('clone-save-btn');
+  const fd = new FormData();
+  const ext = (cloneBlob.type.split('/')[1] || 'webm').split(';')[0];
+  fd.append('file', cloneBlob, `voice.${ext}`);
+  fd.append('label', document.getElementById('clone-label').value);
+  fd.append('gender', document.getElementById('clone-gender').value);
+  fd.append('prompt_text', document.getElementById('clone-text').value);
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await fetch('/api/voices/clone', {method:'POST', body: fd});
+    if (!r.ok) throw new Error((await r.json()).detail || 'failed');
+    const {voice} = await r.json();
+    await loadVoices();
+    renderCloneList();
+    if (segs.length) renderTable();   // refresh per-row voice dropdowns to include the new clone
+    document.getElementById('voice-pick').value = voice.id;
+    cloneBlob = null;
+    document.getElementById('clone-play-btn').disabled = true;
+    toast(`Saved voice "${voice.label}"`,'ok');
+  } catch(e) { toast('Save failed: '+e.message,'err'); }
+  btn.disabled = false; btn.textContent = '💾 Save cloned voice';
+}
+
+function renderCloneList() {
+  const clones = VOICE_LIST.filter(v => v.cloned);
+  const el = document.getElementById('clone-list');
+  if (!clones.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="margin-top:4px">Cloned voices:</div>' + clones.map(v =>
+    `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+       <span style="flex:1">🎙 ${v.label}</span>
+       <span style="cursor:pointer;color:var(--muted)" title="Delete" onclick="deleteClone('${v.id}')">✕</span>
+     </div>`).join('');
+}
+
+async function deleteClone(id) {
+  try {
+    const r = await fetch('/api/voices/clone/'+id, {method:'DELETE'});
+    if (!r.ok) throw new Error('failed');
+    await loadVoices();
+    renderCloneList();
+    toast('Cloned voice deleted','ok');
+  } catch(e) { toast('Delete failed','err'); }
+}
+
+// ─── PROJECT PERSISTENCE ─────────────────────────────────────────────────────
+let saveTimer = null;
+function scheduleSave() {
+  if (!projectId || (!segs.length && !videoFilename)) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveProject, 1500);
+}
+async function saveProject() {
+  if (!projectId) return;
+  try {
+    await fetch('/api/projects', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        id: projectId,
+        name: projectName || videoFilename || 'Untitled',
+        filename: videoFilename || '',
+        job_id: videoJobId || '',
+        // audioUrl is a local blob URL — not persistable
+        segments: segs.map(({audioUrl, generating, ...s}) => s),
+      }),
+    });
+    localStorage.setItem('dai-current-project', projectId);
+    loadProjectList();
+  } catch(e) { /* autosave is best-effort */ }
+}
+async function loadProjectList() {
+  try {
+    const d = await (await fetch('/api/projects')).json();
+    const box = document.getElementById('proj-list');
+    if (!d.projects.length) { box.innerHTML = '<div class="proj-empty">No saved projects</div>'; return; }
+    box.innerHTML = '';
+    d.projects.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'proj-item' + (p.id === projectId ? ' current' : '');
+      el.innerHTML = `<div class="proj-info">
+          <div class="proj-name">${p.name || p.filename || p.id.slice(0,8)}</div>
+          <div class="proj-meta">${p.segment_count} segments · ${new Date(p.updated_at*1000).toLocaleString()}</div>
+        </div>
+        <button class="proj-del">🗑</button>`;
+      el.onclick = () => openProject(p.id);
+      el.querySelector('.proj-del').onclick = async e => {
+        e.stopPropagation();
+        if (!confirm('Delete this project?')) return;
+        await fetch('/api/projects/'+p.id, {method:'DELETE'});
+        if (p.id === projectId) localStorage.removeItem('dai-current-project');
+        loadProjectList();
+      };
+      box.appendChild(el);
+    });
+  } catch(e) { /* list is best-effort */ }
+}
+async function openProject(id) {
+  try {
+    const r = await fetch('/api/projects/'+id);
+    if (!r.ok) { toast('Project not found','err'); return; }
+    const p = await r.json();
+    projectId    = p.id;
+    projectName  = p.name;
+    videoFilename = p.filename || null;
+    videoJobId    = p.job_id || null;
+    segs = (p.segments||[]).map(s => ({...s, checked:true, audioUrl:null, generating:false}));
+    selIdx = null;
+    if (videoFilename) {
+      attachVideo('/api/video/' + videoFilename);
+      document.getElementById('step2a-btn').disabled = false;
+      document.getElementById('step2b-btn').disabled = false;
+      document.getElementById('step2c-btn').disabled = false;
+      document.getElementById('render-btn').disabled = false;
+      document.getElementById('preview-btn').disabled = false;
+    }
+    if (segs.length) document.getElementById('step3-btn').disabled = false;
+    localStorage.setItem('dai-current-project', id);
+    renderTable(); renderTimeline(); loadProjectList();
+    toast(`Project "${p.name}" loaded ✓`, 'ok');
+  } catch(e) { toast('Failed to load project','err'); }
+}
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+const fmtSRT = s => {
+  s = Math.max(0, +s || 0);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sc = Math.floor(s%60), ms = Math.round((s%1)*1000);
+  return `${ph(h,2)}:${ph(m,2)}:${ph(sc,2)},${ph(ms,3)}`;
+};
+const fmtDisp = s => { s=Math.max(0,+s||0); const m=Math.floor(s/60),sc=(s%60); return `${ph(m,2)}:${ph(Math.floor(sc),2)}.${ph(Math.round((sc%1)*100),2)}`; };
+const ph = (n,l) => String(n).padStart(l,'0');
+const parseSRTTime = t => { t=t.replace('.',','); const [hms,ms]=t.split(','); const [h,m,s]=hms.split(':'); return +h*3600+ +m*60+ +s+ +ms/1000; };
+
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show ' + type;
+  setTimeout(() => el.className = 'toast', 2800);
+}
+function updateCounts() {
+  document.getElementById('total-c').textContent   = segs.length;
+  document.getElementById('checked-c').textContent = segs.filter(s=>s.checked).length;
+  document.getElementById('seg-pill').textContent  = `Segments: ${segs.length}`;
+}
+
+// ─── VIDEO ───────────────────────────────────────────────────────────────────
+function attachVideo(url) {
+  vid.src = url;
+  vid.onloadedmetadata = () => {
+    duration = vid.duration;
+    document.getElementById('dur-t').textContent = fmtDisp(duration);
+    document.getElementById('tl-time').textContent = `${fmtDisp(0)} / ${fmtDisp(duration)}`;
+    document.getElementById('vid-box').querySelector('.vid-placeholder').style.display = 'none';
+    vid.style.display = 'block';
+    buildRuler(); renderTimeline();
+  };
+}
+
+// Load the finished dubbed video into the main player and play it end-to-end.
+function playFullDub(outputFile) {
+  if (!outputFile) { toast('No rendered output to play', 'err'); return; }
+  const url = `/api/download/${outputFile}`;
+  attachVideo(url);                         // swaps the player source to the dubbed MP4
+  vid.onloadeddata = () => {                // wait until it's playable, then run the whole thing
+    vid.currentTime = 0;
+    vid.play();
+    document.getElementById('btn-play').textContent = '⏸';
+  };
+  // Keep an explicit download handy (right-side actions could link to the same url).
+  lastRenderUrl = url;
+}
+
+function onVideoSelected(input) {
+  const file = input.files[0]; if (!file) return;
+  exitPreview();
+  attachVideo(URL.createObjectURL(file));
+
+  // A newly loaded video starts a fresh project
+  projectId   = crypto.randomUUID();
+  projectName = file.name;
+
+  // Upload to backend
+  const fd = new FormData(); fd.append('file', file);
+  fetch('/api/upload-video', {method:'POST', body:fd})
+    .then(r => r.json())
+    .then(d => {
+      videoFilename = d.filename;
+      videoJobId    = d.job_id;
+      document.getElementById('step2a-btn').disabled = false;
+      document.getElementById('step2b-btn').disabled = false;
+      document.getElementById('step2c-btn').disabled = false;
+      document.getElementById('render-btn').disabled = false;
+      document.getElementById('preview-btn').disabled = false;
+      toast('Video uploaded ✓', 'ok');
+      scheduleSave();
+    })
+    .catch(e => toast('Upload failed: ' + e.message, 'err'));
+}
+
+// ─── VIDEO CONTROLS ──────────────────────────────────────────────────────────
+document.getElementById('btn-play').onclick = () => {
+  if (vid.paused) { vid.play(); document.getElementById('btn-play').textContent = '⏸'; }
+  else            { vid.pause(); document.getElementById('btn-play').textContent = '▶'; }
+};
+document.getElementById('btn-stop').onclick = () => { vid.pause(); vid.currentTime = 0; document.getElementById('btn-play').textContent = '▶'; };
+document.getElementById('vol').oninput = function() {
+  vid.volume = this.value / 100;
+  document.getElementById('preview-audio').volume = this.value / 100;   // in preview the video is muted
+};
+document.getElementById('scrubber').oninput = function() { if (duration) vid.currentTime = (this.value/100)*duration; };
+
+// In preview mode the dub track (<audio>) is slaved to the video: it follows
+// every play / pause / seek / rate change, with drift correction in ontimeupdate.
+(function wirePreviewSync() {
+  const a = document.getElementById('preview-audio');
+  vid.addEventListener('play',  () => { if (previewMode) { a.currentTime = vid.currentTime; a.play().catch(()=>{}); } });
+  vid.addEventListener('pause', () => { if (previewMode) a.pause(); });
+  vid.addEventListener('seeking',     () => { if (previewMode) a.currentTime = vid.currentTime; });
+  vid.addEventListener('ratechange',  () => { if (previewMode) a.playbackRate = vid.playbackRate; });
+})();
+vid.ontimeupdate = () => {
+  const t = vid.currentTime;
+  document.getElementById('cur-t').textContent = fmtDisp(t);
+  document.getElementById('tl-time').textContent = `${fmtDisp(t)} / ${fmtDisp(duration)}`;
+  document.getElementById('scrubber').value = duration ? (t/duration)*100 : 0;
+  if (duration) document.getElementById('tl-ph').style.left = (t/duration*100)+'%';
+  // Keep the preview dub track from drifting out of sync with the video.
+  if (previewMode) {
+    const a = document.getElementById('preview-audio');
+    if (!vid.paused && Math.abs(a.currentTime - t) > 0.25) a.currentTime = t;
+  }
+  // Highlight active segment
+  const ai = segs.findIndex(s => t >= s.start && t <= s.end);
+  if (ai >= 0 && ai !== selIdx) selectSeg(ai);
+};
+
+// ─── SRT IMPORT ──────────────────────────────────────────────────────────────
+function onSRTImport(input) {
+  const file = input.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('file', file);
+  fetch('/api/import-srt', {method:'POST', body:fd})
+    .then(r => r.json())
+    .then(d => {
+      segs = d.segments.map(s => ({...s, checked:true, audioUrl:null, gender: s.gender||'male'}));
+      // Auto-detect source language so Translate → Khmer uses the right pivot.
+      // CJK characters → Chinese-direct; otherwise treat as English-pivot.
+      const sample = segs.map(s => s.text || '').join('');
+      const detected = /[㐀-鿿]/.test(sample) ? 'zh' : 'en';
+      setSrcMode(detected);
+      renderTable(); renderTimeline(); scheduleSave();
+      document.getElementById('step3-btn').disabled = false;
+      toast(`Imported ${segs.length} segments (${detected === 'en' ? 'English' : 'Chinese'} source)`, 'ok');
+    })
+    .catch(e => toast('Import failed: ' + e.message, 'err'));
+}
+
+// ─── AUTO EXTRACT (WHISPER) ──────────────────────────────────────────────────
+// ─── SOURCE-LANGUAGE MODE ─────────────────────────────────────────────────────
+function setSrcMode(mode) {
+  srcMode = (mode === 'en') ? 'en' : 'zh';
+  document.getElementById('mode-zh-btn').classList.toggle('active', srcMode === 'zh');
+  document.getElementById('mode-en-btn').classList.toggle('active', srcMode === 'en');
+  applyModeLabels();
+}
+function applyModeLabels() {
+  const en = srcMode === 'en';
+  document.getElementById('step2b-label').textContent =
+    en ? 'Auto Extract → English (Whisper)' : 'Auto Extract (Whisper)';
+  document.getElementById('step2a-btn').lastChild.textContent =
+    en ? ' Import English SRT' : ' Import Chinese SRT';
+  const hdr = document.getElementById('orig-col-hdr');
+  if (hdr) hdr.textContent = en ? 'ENGLISH (original)' : 'CHINESE (original)';
+}
+
+function autoExtractSRT() {
+  if (!videoFilename) { toast('Load a video first', 'err'); return; }
+  showProgress(srcMode === 'en'
+    ? 'Transcribing to English with Whisper…'
+    : 'Extracting subtitles with Whisper…', 0);
+  const fd = new FormData();
+  fd.append('filename', videoFilename);
+  fd.append('mode', srcMode);
+  fetch('/api/extract-srt', {method:'POST', body:fd})
+    .then(r => r.json())
+    .then(d => pollJob(d.job_id, 'extract'))
+    .catch(e => { hideProgress(); toast('Failed: ' + e.message, 'err'); });
+}
+
+// ─── DETECT BURNED-IN SUBTITLES (OCR) ────────────────────────────────────────
+function detectSubs() {
+  if (!videoFilename) { toast('Load a video first', 'err'); return; }
+  setSrcMode('en');   // OCR reads the on-screen English text → English → Khmer
+  showProgress('Reading subtitles from video (OCR)…', 0);
+  const fd = new FormData();
+  fd.append('filename', videoFilename);
+  fd.append('lang', 'en');
+  fetch('/api/detect-subs', {method:'POST', body:fd})
+    .then(r => r.json())
+    .then(d => pollJob(d.job_id, 'detect'))
+    .catch(e => { hideProgress(); toast('Failed: ' + e.message, 'err'); });
+}
+
+// ─── TRANSLATE ───────────────────────────────────────────────────────────────
+async function translateAll() {
+  if (!segs.length) { toast('No segments to translate', 'err'); return; }
+  showProgress(srcMode === 'en' ? 'Translating English → Khmer…' : 'Translating Chinese → Khmer…', 10);
+  try {
+    const r = await fetch('/api/translate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({segments: segs, source_lang: srcMode}),
+    });
+    const d = await r.json();
+    segs = segs.map((s,i) => ({
+      ...s,
+      khmer: d.segments[i]?.khmer || s.khmer || '',
+      translation_failed: !!d.segments[i]?.translation_failed,
+    }));
+    renderTable(); renderTimeline(); scheduleSave();
+    hideProgress();
+    document.getElementById('step3-btn').classList.add('done');
+    const failed = segs.filter(s=>s.translation_failed).length;
+    if (failed) toast(`${failed} segments failed to translate (shown in red)`, 'err');
+    else toast(`Translated ${segs.length} segments`, 'ok');
+  } catch(e) { hideProgress(); toast('Translation failed: ' + e.message, 'err'); }
+}
+
+// ─── FULL ENGLISH SUBTITLE (whole-video preview) ─────────────────────────────
+async function showFullEnglish() {
+  if (!segs.length) { toast('No segments to translate', 'err'); return; }
+  showProgress('Translating to English…', 10);
+  try {
+    const r = await fetch('/api/translate-english', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({segments: segs, source_lang: srcMode}),
+    });
+    const d = await r.json();
+    hideProgress();
+    document.getElementById('eng-full-text').value = d.full_text || '(no text)';
+    document.getElementById('eng-overlay').classList.add('show');
+  } catch(e) { hideProgress(); toast('English translation failed: ' + e.message, 'err'); }
+}
+
+function copyFullEnglish() {
+  const t = document.getElementById('eng-full-text').value;
+  navigator.clipboard.writeText(t).then(
+    () => toast('Copied to clipboard', 'ok'),
+    () => toast('Copy failed', 'err'));
+}
+
+function downloadFullEnglish() {
+  const t = document.getElementById('eng-full-text').value;
+  const blob = new Blob([t], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'english_subtitle.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ─── TABLE RENDER ────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('sub-tbody');
+  tbody.innerHTML = '';
+  segs.forEach((seg, i) => {
+    const tr = document.createElement('tr');
+    if (selIdx === i) tr.classList.add('sel');
+    tr.onclick = () => selectSeg(i);
+    const voiceSel = `<select class="voice-sel" onclick="event.stopPropagation()"
+        onchange="setVoice(${i},this.value,this)">${voiceOptions(segVoice(seg))}</select>`;
+    tr.innerHTML = `
+      <td><input type="checkbox" class="chk" ${seg.checked?'checked':''} onclick="event.stopPropagation()" onchange="segs[${i}].checked=this.checked;updateCounts()"/></td>
+      <td style="color:var(--muted);font-size:10px">${i+1}</td>
+      <td><span class="time-badge" ondblclick="editTime(${i},'start')">${fmtSRT(seg.start)}</span></td>
+      <td><span class="time-badge" ondblclick="editTime(${i},'end')">${fmtSRT(seg.end)}</span></td>
+      <td><div class="zh-text" title="${seg.text||''}">${seg.text||'<em style="color:var(--muted)">—</em>'}</div></td>
+      <td><textarea class="km-cell${seg.translation_failed?' failed':''}" rows="1"
+            ${seg.translation_failed?'title="Translation failed — still Chinese text"':''}
+            onclick="event.stopPropagation()"
+            onchange="kmEdited(${i}, this)"
+            oninput="autoH(this);segs[${i}].khmer=this.value"
+          >${seg.khmer||''}</textarea></td>
+      <td>${speakerBadge(seg)}</td>
+      <td>${voiceSel}</td>
+      <td><div class="audio-cell">
+        ${seg.audioUrl ? `<audio class="mini-audio" controls src="${seg.audioUrl}"></audio>` : ''}
+        <button class="gen-btn ${seg.audioUrl?'done':''} ${seg.generating?'busy':''}"
+          onclick="event.stopPropagation();genRow(${i})">${seg.generating?'…':'GENERATE'}</button>
+        <button class="del-btn" onclick="event.stopPropagation();delRow(${i})">🗑</button>
+      </div></td>`;
+    tbody.appendChild(tr);
+  });
+  renderSpeakerPanel();
+  updateCounts();
+}
+function autoH(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+
+function kmEdited(i, el) {
+  segs[i].khmer = el.value;
+  segs[i].translation_failed = false;
+  el.classList.remove('failed');
+  // Text changed → any generated preview audio is stale; reset it so the
+  // voice always follows the current text. (No full re-render: that would
+  // steal focus and swallow the next button click.)
+  if (segs[i].audioUrl) {
+    segs[i].audioUrl = null;
+    const row = el.closest('tr');
+    row.querySelector('.mini-audio')?.remove();
+    row.querySelector('.gen-btn')?.classList.remove('done');
+  }
+  scheduleSave();
+}
+
+// ─── TABLE OPS ───────────────────────────────────────────────────────────────
+function selectSeg(i) {
+  selIdx = i; renderTable(); renderTimeline();
+  // scroll timeline to segment
+  if (duration && segs[i]) {
+    const tl = document.getElementById('tl-body');
+    const cvs = document.getElementById('tl-canvas');
+    tl.scrollLeft = (segs[i].start / duration) * cvs.offsetWidth - 80;
+  }
+}
+function setGender(i, g)  { segs[i].gender = g; segs[i].voice = defaultVoiceFor(g); segs[i].audioUrl = null; renderTable(); scheduleSave(); }
+function setVoice(i, v, el) {
+  segs[i].voice = v;
+  segs[i].gender = voiceGender(v);
+  // The <select> already shows the user's pick natively — a full renderTable()
+  // here would rebuild the tbody and destroy this very dropdown mid-change,
+  // making it appear to "revert" and swallowing the next click (same reason
+  // kmEdited patches in place). So only clear this row's stale audio.
+  if (segs[i].audioUrl) {
+    segs[i].audioUrl = null;
+    const row = (el && el.closest('tr')) || document.getElementById('sub-tbody').children[i];
+    row?.querySelector('.mini-audio')?.remove();
+    row?.querySelector('.gen-btn')?.classList.remove('done');
+  }
+  renderTimeline(); scheduleSave();
+}
+function editTime(i, field) {
+  const v = prompt(`Edit ${field} (seconds):`, segs[i][field]);
+  if (v !== null && !isNaN(+v)) { segs[i][field] = +v; renderTable(); renderTimeline(); scheduleSave(); }
+}
+function addRow() {
+  const last = segs.length ? segs[segs.length-1].end : 0;
+  segs.push({start:last,end:last+3,text:'',khmer:'',gender:'male',checked:true,audioUrl:null,generating:false});
+  renderTable(); renderTimeline(); scheduleSave();
+}
+function delRow(i) { segs.splice(i,1); if(selIdx>=i) selIdx=Math.max(0,selIdx-1); renderTable(); renderTimeline(); scheduleSave(); }
+function toggleAll(el) { segs.forEach(s=>s.checked=el.checked); renderTable(); }
+function setAllGender(g) { segs.forEach(s=>{s.gender=g;s.voice=defaultVoiceFor(g);s.audioUrl=null;}); renderTable(); renderTimeline(); scheduleSave(); toast(`All set to ${g}`,'ok'); }
+function setCheckedGender(g) { segs.filter(s=>s.checked).forEach(s=>{s.gender=g;s.voice=defaultVoiceFor(g);s.audioUrl=null;}); renderTable(); renderTimeline(); scheduleSave(); }
+function clearVoices() { segs.forEach(s=>{s.audioUrl=null;s.generating=false;}); renderTable(); }
+function clearAll() { if(!confirm('Clear all segments?')) return; segs=[]; selIdx=null; renderTable(); renderTimeline(); scheduleSave(); }
+function shiftSel(d) {
+  if (selIdx===null) return;
+  segs[selIdx].start = Math.max(0, segs[selIdx].start + d);
+  segs[selIdx].end   = Math.max(segs[selIdx].start + 0.1, segs[selIdx].end + d);
+  renderTable(); renderTimeline(); scheduleSave();
+}
+
+// ─── TTS PER ROW ─────────────────────────────────────────────────────────────
+async function genRow(i) {
+  const seg = segs[i];
+  if (!seg.khmer) { toast('No Khmer text in this row', 'err'); return; }
+  seg.generating = true; renderTable();
+  try {
+    const slot = seg.end - seg.start;
+    const r = await fetch('/api/tts', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text: seg.khmer, gender: seg.gender || 'female', speed: 1.0, voice: segVoice(seg)==='auto'?'':segVoice(seg)}),
+    });
+    if (!r.ok) throw new Error(await errText(r));
+    const blob = await r.blob();
+    seg.audioUrl = URL.createObjectURL(blob);
+    seg.generating = false; renderTable();
+    toast(`Row ${i+1} generated ✓`, 'ok');
+  } catch(e) { seg.generating = false; renderTable(); toast('TTS failed: '+e.message,'err'); }
+}
+
+async function genSelected() {
+  const toGen = segs.map((s,i)=>({s,i})).filter(({s})=>s.checked && s.khmer);
+  if (!toGen.length) { toast('No checked rows with Khmer text','err'); return; }
+  for (const {i} of toGen) await genRow(i);
+  toast(`Generated ${toGen.length} segments`, 'ok');
+}
+
+// ─── EXPORT SRT ──────────────────────────────────────────────────────────────
+function exportSRT() {
+  if (!segs.length) { toast('No segments','err'); return; }
+  let srt = '';
+  segs.forEach((s,i) => {
+    srt += `${i+1}\n${fmtSRT(s.start)} --> ${fmtSRT(s.end)}\n${s.khmer||''}\n\n`;
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([srt],{type:'text/plain'}));
+  a.download = 'khmer_subtitles.srt'; a.click();
+  toast('SRT exported','ok');
+}
+
+// ─── PREVIEW DUB (audio-only, no video re-encode) ─────────────────────────────
+async function previewDub() {
+  if (!videoFilename) { toast('Load a video first','err'); return; }
+  if (!segs.some(s=>s.khmer)) { toast('Translate subtitles first','err'); return; }
+  showProgress('Preparing preview…', 0, 'Building dub preview…');
+  try {
+    const r = await fetch('/api/preview', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        filename:     videoFilename,
+        segments:     segs.map(s=>({start:s.start,end:s.end,text:s.text,khmer:s.khmer,gender:s.gender||'female',voice:segVoice(s)})),
+        remove_audio: document.getElementById('remove-audio').checked,
+      }),
+    });
+    const d = await r.json();
+    pollJob(d.preview_id, 'preview');
+  } catch(e) { hideProgress(); toast('Preview failed: '+e.message,'err'); }
+}
+
+// Play the original video (muted) with the freshly-mixed dub audio overlaid in
+// sync. This is the true final audio (voice + timing + ducking) WITHOUT the
+// expensive video re-encode — for quality-checking before FINAL RENDER.
+function playPreview(audioFile) {
+  if (!audioFile) { toast('No preview audio produced','err'); return; }
+  const a = document.getElementById('preview-audio');
+  previewMode = true;
+  a.src = `/api/download/${audioFile}`;
+  attachVideo('/api/video/' + videoFilename);   // back to the ORIGINAL video frames
+  vid.muted = true;                             // all sound now comes from the dub track
+  vid.onloadeddata = () => {
+    vid.currentTime = 0; a.currentTime = 0;
+    vid.play(); a.play();
+    document.getElementById('btn-play').textContent = '⏸';
+  };
+}
+
+// Leave preview mode (e.g. when loading a different video or the final render).
+function exitPreview() {
+  previewMode = false;
+  const a = document.getElementById('preview-audio');
+  a.pause(); a.removeAttribute('src'); a.load();
+  vid.muted = false;
+}
+
+// ─── FINAL RENDER ────────────────────────────────────────────────────────────
+async function finalRender() {
+  if (!videoFilename) { toast('Load a video first','err'); return; }
+  if (!segs.some(s=>s.khmer)) { toast('Translate subtitles first','err'); return; }
+  showProgress('Starting final render…', 0);
+  try {
+    const r = await fetch('/api/render', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        job_id:    videoJobId,
+        filename:  videoFilename,
+        segments:  segs.map(s=>({start:s.start,end:s.end,text:s.text,khmer:s.khmer,gender:s.gender||'female',voice:segVoice(s)})),
+        burn_subs: document.getElementById('burn-subs').checked,
+        remove_subs: document.getElementById('remove-subs').checked,
+        remove_region: {
+          x: (+document.getElementById('rm-x').value || 0)  / 100,
+          y: (+document.getElementById('rm-y').value || 0)  / 100,
+          w: (+document.getElementById('rm-w').value || 0)  / 100,
+          h: (+document.getElementById('rm-h').value || 0)  / 100,
+        },
+        remove_color: document.getElementById('rm-color').value,
+        remove_audio: document.getElementById('remove-audio').checked,
+        sub_style: {
+          font_size:  +document.getElementById('sub-size').value || 22,
+          font_color: document.getElementById('sub-color').value.replace('#',''),
+          outline:    +document.getElementById('sub-outline').value || 2,
+          margin_v:   +document.getElementById('sub-margin').value || 40,
+        },
+      }),
+    });
+    const d = await r.json();
+    pollJob(d.render_id, 'render');
+  } catch(e) { hideProgress(); toast('Render failed: '+e.message,'err'); }
+}
+
+// ─── NOTIFY SOUND ────────────────────────────────────────────────────────────
+// A short ascending two-tone chime via Web Audio — no asset file needed.
+function playNotifySound() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const now = ctx.currentTime;
+    [[880, 0], [1318.5, 0.18]].forEach(([freq, t]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, now + t);
+      gain.gain.exponentialRampToValueAtTime(0.3, now + t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + t);
+      osc.stop(now + t + 0.4);
+    });
+    setTimeout(() => ctx.close(), 1000);
+  } catch (e) { /* audio not available — silent */ }
+}
+
+// ─── JOB POLLING ─────────────────────────────────────────────────────────────
+function pollJob(jobId, type) {
+  const timer = setInterval(async () => {
+    try {
+      const r = await fetch(`/api/status/${jobId}`);
+      const d = await r.json();
+      if (d.state === 'processing' || d.state === 'pending') {
+        showProgress(d.stage || 'Processing…', d.pct || 0);
+        return;
+      }
+      clearInterval(timer);
+      hideProgress();
+      if (d.state === 'done') {
+        if (type === 'extract' || type === 'detect') {
+          segs = (d.segments||[]).map(s=>({...s,checked:true,audioUrl:null,khmer:'',gender:s.gender||'male'}));
+          renderTable(); renderTimeline(); scheduleSave();
+          document.getElementById('step3-btn').disabled = false;
+          if (type === 'detect') {
+            toast(segs.length ? `Detected ${segs.length} subtitles — now Translate → Khmer` : 'No subtitles detected in video', segs.length ? 'ok' : 'err');
+          } else {
+            toast(`Extracted ${segs.length} segments`,'ok');
+          }
+        } else if (type === 'preview') {
+          toast('Preview ready — playing dub over original video','ok');
+          playPreview(d.audio);
+        } else if (type === 'render') {
+          toast('Render complete! Playing full dub…','ok');
+          playNotifySound();
+          exitPreview();
+          playFullDub(d.output);
+          if (d.srt) {
+            setTimeout(() => window.open(`/api/download/${d.srt}`,'_blank'), 500);
+          }
+        }
+      } else {
+        toast('Error: '+(d.error||'unknown'),'err');
+      }
+    } catch(e) { clearInterval(timer); hideProgress(); toast('Connection error','err'); }
+  }, 2000);
+}
+
+// ─── PROGRESS ────────────────────────────────────────────────────────────────
+function showProgress(stage, pct, title='Processing…') {
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('prog-title').textContent = title;
+  document.getElementById('prog-stage').textContent = stage;
+  document.getElementById('prog-fill').style.width  = pct+'%';
+  document.getElementById('prog-pct').textContent   = pct+'%';
+}
+function hideProgress() { document.getElementById('overlay').classList.remove('show'); }
+
+// ─── TIMELINE ────────────────────────────────────────────────────────────────
+function buildRuler() {
+  const ruler = document.getElementById('tl-ruler'); ruler.innerHTML='';
+  if (!duration) return;
+  const step = duration>120?30:duration>60?10:5;
+  for(let t=0;t<=duration;t+=step){
+    const m=document.createElement('div'); m.className='tl-mark';
+    m.style.left=(t/duration*100)+'%'; m.textContent=fmtDisp(t);
+    ruler.appendChild(m);
+  }
+}
+
+function renderTimeline() {
+  const st = document.getElementById('tl-sub-track');
+  const vt = document.getElementById('tl-voice-track');
+  st.innerHTML=''; vt.innerHTML='';
+  if (!duration) return;
+  segs.forEach((seg,i) => {
+    const left  = (seg.start/duration*100)+'%';
+    const width = ((seg.end-seg.start)/duration*100)+'%';
+    // subtitle track
+    const el=document.createElement('div'); el.className='tl-seg'+(selIdx===i?' sel':'');
+    el.style.left=left; el.style.width=width;
+    el.textContent=(seg.khmer||seg.text||'#'+(i+1)).substring(0,14);
+    el.title=`${fmtDisp(seg.start)} → ${fmtDisp(seg.end)}\n${seg.khmer||''}`;
+    el.onclick=e=>{e.stopPropagation();selectSeg(i);};
+    el.onmousedown=makeDrag(i);
+    st.appendChild(el);
+    // voice track (only if audio generated)
+    if (seg.audioUrl) {
+      const vl=document.createElement('div');
+      vl.className=`tl-seg ${seg.gender||'female'}`+(selIdx===i?' sel':'');
+      vl.style.left=left; vl.style.width=width;
+      vl.textContent='♪ '+(seg.gender==='male'?'♂':'♀');
+      vt.appendChild(vl);
+    }
+  });
+}
+
+function makeDrag(i) {
+  return function(e) {
+    e.preventDefault();
+    const track=document.getElementById('tl-sub-track');
+    const w=track.offsetWidth; const startX=e.clientX;
+    const os=segs[i].start, oe=segs[i].end, len=oe-os;
+    function mv(ev){
+      const dt=((ev.clientX-startX)/w)*duration;
+      let ns=Math.max(0,os+dt); let ne=ns+len;
+      if(ne>duration){ne=duration;ns=ne-len;}
+      segs[i].start=ns; segs[i].end=ne; renderTimeline();
+    }
+    function up(){document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);renderTable();scheduleSave();}
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  };
+}
+
+function setZoom(el) {
+  const pct=+el.value;
+  document.getElementById('zoom-val').textContent=pct+'%';
+  document.getElementById('tl-canvas').style.width=pct+'%';
+  buildRuler(); renderTimeline();
+}
+
+// Click timeline to seek
+document.getElementById('tl-sub-track').onclick=function(e){
+  if(!duration) return;
+  const r=this.getBoundingClientRect();
+  vid.currentTime=((e.clientX-r.left)/r.width)*duration;
+};
+
+// ─── STARTUP: restore last project ───────────────────────────────────────────
+(async function init() {
+  applyModeLabels();
+  await loadVoices();
+  await loadProjectList();
+  const last = localStorage.getItem('dai-current-project');
+  if (last) {
+    const r = await fetch('/api/projects/'+last).catch(()=>null);
+    if (r && r.ok) openProject(last);
+    else localStorage.removeItem('dai-current-project');
+  }
+})();
+</script>
+</body>
+</html>

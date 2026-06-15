@@ -1,0 +1,11 @@
+# Extra dependencies for TTS_ENGINE=voxcpm_local (in-process VoxCPM2).
+# Install ONLY on the GPU PC, on top of requirements.txt:
+#
+#   pip install -r requirements.txt
+#   pip install -r requirements-voxcpm.txt
+#
+# Install the CUDA build of torch matching your GPU's CUDA version first if the
+# default wheel doesn't match, e.g.:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+torch
+voxcpm

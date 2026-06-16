@@ -45,6 +45,11 @@ GEMINI_TTS_BACKOFF     = float(os.environ.get("GEMINI_TTS_BACKOFF", "8"))
 VOXCPM_REF_AUDIO_FIELD = os.environ.get("VOXCPM_REF_AUDIO_FIELD", "reference_audio")
 VOXCPM_REF_TEXT_FIELD  = os.environ.get("VOXCPM_REF_TEXT_FIELD",  "reference_text")
 
+# Hybrid cloning on a GPU box: run VoxCPM2 IN-PROCESS only for cloned segments
+# while keeping TTS_ENGINE (e.g. gtts) for every other voice. Needs an NVIDIA GPU
+# and `pip install -r backend/requirements-voxcpm.txt`. No endpoint required.
+VOXCPM_LOCAL_CLONE = os.environ.get("VOXCPM_LOCAL_CLONE", "").strip().lower() in ("1", "true", "yes")
+
 from . import voice_clone
 
 
@@ -444,6 +449,20 @@ def _engine_audio(text: str, voice_id: str, voice: Dict[str, Any]) -> Tuple[byte
     VoxCPM2 and Azure produce real voices, so no pitch/EQ post-processing is
     applied; gTTS has one voice, so the profile's pitch/bass are applied after.
     """
+    # Hybrid cloning: a cloned voice (clone_*) is reproduced by VoxCPM from its
+    # reference clip. So even when the configured engine can't clone (gTTS /
+    # Azure / Gemini), route ONLY the cloned segments to VoxCPM — a remote
+    # endpoint (VOXCPM_BASE_URL) or the in-process model (VOXCPM_LOCAL_CLONE, for
+    # a GPU box) — while normal voices stay on the main engine. The dedicated
+    # voxcpm / voxcpm_local engines keep their own branches below.
+    if not _is_voxcpm() and not _is_voxcpm_local():
+        clone = voice_clone.get_clone(voice_id)
+        if clone and VOXCPM_BASE_URL:
+            return _voxcpm_audio(text, voice_id), {"pitch": 1.0, "bass": 0}
+        if clone and VOXCPM_LOCAL_CLONE:
+            from . import voxcpm_local
+            wav = voxcpm_local.synthesize(text, voice_id, clone.get("gender", "female"))
+            return wav, {"pitch": 1.0, "bass": 0}
     if _is_voxcpm():
         return _voxcpm_audio(text, voice_id or _default_voice_id("female")), {"pitch": 1.0, "bass": 0}
     if _is_voxcpm_local():

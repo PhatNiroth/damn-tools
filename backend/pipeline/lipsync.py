@@ -260,6 +260,38 @@ def _drawbox_filter(W: int, H: int, region: dict = None, color: str = "white") -
     return f"drawbox=x={x}:y={y}:w={w}:h={h}:color={_ff_color(color)}:t=fill"
 
 
+def _delogo_filter(W: int, H: int, region: dict = None) -> str:
+    """Build a `delogo=...` filter that ERASES (not covers) the original subs.
+
+    Unlike the solid bar (`_drawbox_filter`), delogo reconstructs the region by
+    interpolating from the pixels just outside it — so on simple/blurred
+    backgrounds the text disappears with no visible patch. No GPU or model
+    needed (runs in the same single ffmpeg pass). On busy backgrounds it leaves
+    a soft smear, which is still far less obtrusive than an opaque bar.
+
+    delogo requires the box to stay strictly inside the frame (it samples a 1px
+    border around it), so we inset by 1px on every edge that touches an edge.
+    """
+    region = region or {}
+    fx = float(region.get("x", 0.0))
+    fy = float(region.get("y", 0.82))
+    fw = float(region.get("w", 1.0))
+    fh = float(region.get("h", 0.16))
+
+    x = max(1, int(W * fx))
+    y = max(1, int(H * fy))
+    w = int(W * fw)
+    h = int(H * fh)
+    # Keep at least a 1px border on the right/bottom for delogo to sample from.
+    if x + w > W - 1:
+        w = W - 1 - x
+    if y + h > H - 1:
+        h = H - 1 - y
+    w = max(1, w)
+    h = max(1, h)
+    return f"delogo=x={x}:y={y}:w={w}:h={h}"
+
+
 def finalize_video(
     video_path: str,
     audio_path: str,
@@ -268,6 +300,7 @@ def finalize_video(
     remove_subs: bool = False,
     remove_region: dict = None,
     remove_color: str = "white",
+    remove_mode: str = "bar",
     srt_path: str = None,
     burn_subs: bool = False,
     sub_style: dict = None,
@@ -294,7 +327,12 @@ def finalize_video(
     # on the real picture, not the blurred side-bars), in legacy order.
     pre = []
     if remove_subs:
-        pre.append(_drawbox_filter(W, H, remove_region, remove_color))
+        if remove_mode == "erase":
+            # Interpolation-based erasure (delogo) — reconstructs the region.
+            pre.append(_delogo_filter(W, H, remove_region))
+        else:
+            # Opaque cover bar (default, legacy behaviour).
+            pre.append(_drawbox_filter(W, H, remove_region, remove_color))
     if burn_subs and srt_path:
         pre.append(_subtitles_filter(srt_path, sub_style))
 

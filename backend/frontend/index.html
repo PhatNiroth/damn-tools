@@ -308,10 +308,12 @@ input[type=file]{display:none}
       <div style="font-size:11px;color:var(--text);background:var(--input-bg);border-radius:4px;padding:6px;margin-bottom:7px">
         <span id="clone-script">នេះជាសំឡេងរបស់ខ្ញុំសម្រាប់ការបញ្ចូលសំឡេងជាភាសាខ្មែរ។</span>
       </div>
-      <div style="display:flex;gap:5px;margin-bottom:7px">
+      <div style="display:flex;gap:5px;margin-bottom:5px">
         <button class="sbtn" id="clone-rec-btn" style="margin-bottom:0;flex:1" onclick="toggleRecord()">● Record</button>
         <button class="cbtn" id="clone-play-btn" title="Play recording" onclick="playClone()" disabled>▶</button>
       </div>
+      <input type="file" id="clone-file-input" accept="audio/*" style="display:none" onchange="onCloneFileSelected(this)"/>
+      <button class="sbtn" style="margin-bottom:7px;font-size:10px;width:100%" onclick="document.getElementById('clone-file-input').click()">📂 Upload audio file instead</button>
       <input id="clone-label" class="voice-sel" style="width:100%;box-sizing:border-box;margin-bottom:6px" placeholder="Voice name (e.g. My voice)"/>
       <select id="clone-gender" class="voice-sel" style="width:100%;box-sizing:border-box;margin-bottom:6px">
         <option value="female">♀ Female</option>
@@ -717,6 +719,18 @@ async function toggleRecord() {
     btn.textContent = '■ Stop';
     btn.classList.add('busy');
   } catch(e) { toast('Mic permission denied','err'); }
+}
+
+function onCloneFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  cloneBlob = file;
+  document.getElementById('clone-play-btn').disabled = false;
+  document.getElementById('clone-save-btn').disabled = false;
+  if (!document.getElementById('clone-label').value)
+    document.getElementById('clone-label').value = file.name.replace(/\.[^.]+$/, '');
+  toast(`File ready: ${file.name}`, 'ok');
+  input.value = '';
 }
 
 function playClone() {

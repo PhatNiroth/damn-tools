@@ -46,6 +46,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Optional: in-process VoxCPM2 for real voice cloning on a GPU box.
+# Build with `--build-arg INSTALL_VOXCPM=1` on the GPU PC (skips on the laptop).
+# torch is already the CUDA build installed above, so only `voxcpm` is added.
+ARG INSTALL_VOXCPM=0
+COPY backend/requirements-voxcpm.txt .
+RUN if [ "$INSTALL_VOXCPM" = "1" ]; then \
+        pip install --no-cache-dir voxcpm ; \
+    fi
+
 # Copy application code (bust cache with --no-cache or increment this comment: v2)
 COPY backend/ /app/
 COPY frontend/ /app/frontend/

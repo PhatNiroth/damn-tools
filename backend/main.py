@@ -269,6 +269,22 @@ async def clone_voice(
     return {"voice": voice}
 
 
+class CloneUpdate(BaseModel):
+    gender: str | None = None
+    label:  str | None = None
+
+
+@api.patch("/api/voices/clone/{voice_id}")
+def update_cloned_voice(voice_id: str, body: CloneUpdate):
+    """Fix a cloned voice's gender (or label) after it was recorded."""
+    voice = voice_clone.update_clone(
+        Path(voice_id).name, gender=body.gender, label=body.label
+    )
+    if voice is None:
+        raise HTTPException(404, "Cloned voice not found")
+    return {"voice": voice}
+
+
 @api.delete("/api/voices/clone/{voice_id}")
 def remove_cloned_voice(voice_id: str):
     if not voice_clone.delete_clone(Path(voice_id).name):
@@ -294,7 +310,10 @@ class RenderRequest(BaseModel):
     remove_subs: bool = False
     remove_region: Optional[dict] = None
     remove_color: str = "white"
+    remove_mode: str = "bar"   # "bar" = opaque cover; "erase" = delogo interpolation
     remove_audio: bool = True
+    bgm_volume: float = 1.0
+    voice_volume: float = 1.0
 
 @api.post("/api/render")
 def render(req: RenderRequest, request: Request):
@@ -305,7 +324,8 @@ def render(req: RenderRequest, request: Request):
     task = render_from_segments.apply_async(
         args=[render_id, safe, req.segments, req.burn_subs, style,
               req.remove_subs, req.remove_audio,
-              req.remove_region, req.remove_color],
+              req.remove_region, req.remove_color, req.remove_mode,
+              req.bgm_volume, req.voice_volume],
         task_id=render_id,
     )
     return {"render_id": render_id}
@@ -317,6 +337,8 @@ class PreviewRequest(BaseModel):
     filename:     str
     segments:     List[dict]
     remove_audio: bool = True
+    bgm_volume:   float = 1.0
+    voice_volume: float = 1.0
 
 @api.post("/api/preview")
 def preview(req: PreviewRequest, request: Request):
@@ -324,7 +346,8 @@ def preview(req: PreviewRequest, request: Request):
     safe = _safe_upload_path(req.filename).name
     preview_id = str(uuid.uuid4())
     preview_audio.apply_async(
-        args=[preview_id, safe, req.segments, req.remove_audio],
+        args=[preview_id, safe, req.segments, req.remove_audio,
+              req.bgm_volume, req.voice_volume],
         task_id=preview_id,
     )
     return {"preview_id": preview_id}

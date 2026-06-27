@@ -20,7 +20,22 @@ x-app-env: &app-env
   # gemini (Google AI Studio native TTS — reuses GEMINI_API_KEY, free tier,
   # 30 prebuilt voices; low requests-per-minute limit so renders are slower)
   TTS_ENGINE: ${TTS_ENGINE:-gtts}
+  # VoxCPM endpoint (vLLM-Omni, OpenAI-compatible /v1/audio/speech). Set this to
+  # enable REAL voice cloning even while TTS_ENGINE stays gtts: cloned voices
+  # (recorded in the UI) are routed here and reproduced from their reference
+  # clip, while all other voices keep using TTS_ENGINE.
   VOXCPM_BASE_URL: ${VOXCPM_BASE_URL:-}
+  VOXCPM_MODEL: ${VOXCPM_MODEL:-openbmb/VoxCPM2}
+  # Field names the VoxCPM server expects for the inline reference (audio b64 +
+  # transcript). Adjust to match your server build if it differs.
+  VOXCPM_REF_AUDIO_FIELD: ${VOXCPM_REF_AUDIO_FIELD:-reference_audio}
+  VOXCPM_REF_TEXT_FIELD: ${VOXCPM_REF_TEXT_FIELD:-reference_text}
+  # GPU PC: run VoxCPM2 in-process for cloned voices ONLY (normal voices stay on
+  # TTS_ENGINE). No endpoint needed. Needs an NVIDIA GPU + the voxcpm package
+  # (build the image with INSTALL_VOXCPM=1, see docker-compose.gpu.yml).
+  VOXCPM_LOCAL_CLONE: ${VOXCPM_LOCAL_CLONE:-}
+  VOXCPM_LOCAL_MODEL: ${VOXCPM_LOCAL_MODEL:-openbmb/VoxCPM2}
+  VOXCPM_LOCAL_DEVICE: ${VOXCPM_LOCAL_DEVICE:-}
   AZURE_SPEECH_KEY: ${AZURE_SPEECH_KEY:-}
   AZURE_SPEECH_REGION: ${AZURE_SPEECH_REGION:-southeastasia}
   BG_IDLE_DB: ${BG_IDLE_DB:-8}
@@ -31,6 +46,7 @@ x-app-volumes: &app-volumes
   - ./outputs:/app/outputs
   - ./data:/app/data
   - ./Wav2Lip:/app/Wav2Lip
+  - ./frontend:/app/frontend      # live-mount the UI (edits show on refresh, no rebuild)
 
 services:
   redis:
@@ -50,6 +66,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Set INSTALL_VOXCPM=1 to bake the in-process cloning model into the
+        # image (works on CPU laptops too — just slow). GPU adds the reservation
+        # via docker-compose.gpu.yml.
+        INSTALL_VOXCPM: ${INSTALL_VOXCPM:-0}
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -69,6 +90,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        INSTALL_VOXCPM: ${INSTALL_VOXCPM:-0}
     restart: unless-stopped
     environment: *app-env
     volumes: *app-volumes

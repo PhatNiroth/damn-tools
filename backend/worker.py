@@ -91,7 +91,8 @@ def detect_subs_task(self, job_id: str, video_filename: str, lang: str = "en"):
 
 @app.task(bind=True, name="preview_audio")
 def preview_audio(self, job_id: str, video_filename: str, segments: list,
-                  remove_audio: bool = True):
+                  remove_audio: bool = True,
+                  bgm_volume: float = 1.0, voice_volume: float = 1.0):
     """
     Quick quality preview: generate the Khmer TTS and mix the final audio track,
     but skip the expensive video render (mux / sub-cover / sub-burn / letterbox).
@@ -115,7 +116,9 @@ def preview_audio(self, job_id: str, video_filename: str, segments: list,
 
         update("Mixing audio track", 85)
         khmer_audio = build_audio_track(segments, audio_path, OUTPUT_DIR, job_id,
-                                        remove_original=remove_audio)
+                                        remove_original=remove_audio,
+                                        bgm_volume=bgm_volume,
+                                        voice_volume=voice_volume)
 
         update("Done", 100)
         return {
@@ -131,7 +134,9 @@ def preview_audio(self, job_id: str, video_filename: str, segments: list,
 def render_from_segments(self, job_id: str, video_filename: str, segments: list,
                          burn_subs: bool = False, sub_style: dict = None,
                          remove_subs: bool = False, remove_audio: bool = True,
-                         remove_region: dict = None, remove_color: str = "white"):
+                         remove_region: dict = None, remove_color: str = "white",
+                         remove_mode: str = "bar",
+                         bgm_volume: float = 1.0, voice_volume: float = 1.0):
     """
     Given pre-translated segments (with 'khmer', 'start', 'end', 'gender'),
     generate Khmer TTS timed to each subtitle window and mux into the video.
@@ -152,7 +157,9 @@ def render_from_segments(self, job_id: str, video_filename: str, segments: list,
 
         update("Mixing audio track", 80)
         khmer_audio = build_audio_track(segments, audio_path, OUTPUT_DIR, job_id,
-                                        remove_original=remove_audio)
+                                        remove_original=remove_audio,
+                                        bgm_volume=bgm_volume,
+                                        voice_volume=voice_volume)
 
         # Save Khmer SRT (written before the render so it can be burned in the
         # single combined encode below).
@@ -169,6 +176,7 @@ def render_from_segments(self, job_id: str, video_filename: str, segments: list,
             remove_subs=remove_subs,
             remove_region=remove_region,
             remove_color=remove_color,
+            remove_mode=remove_mode,
             srt_path=srt_path,
             burn_subs=burn_subs,
             sub_style=sub_style,

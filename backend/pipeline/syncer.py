@@ -1,7 +1,17 @@
 import os
+import math
 from pathlib import Path
 from pydub import AudioSegment
 from typing import List, Dict, Any, Tuple
+
+
+def _vol_to_db(v: float) -> float:
+    """Convert a 0..N linear volume multiplier to a dB gain (<=0 mutes)."""
+    if v is None:
+        return 0.0
+    if v <= 0:
+        return -120.0
+    return 20.0 * math.log10(v)
 
 # Background (original Chinese audio) levels, in dB attenuation
 BG_IDLE_DB   = float(os.environ.get("BG_IDLE_DB",   "8"))   # in gaps between speech
@@ -26,6 +36,8 @@ def build_audio_track(
     output_dir: str,
     job_id: str,
     remove_original: bool = False,
+    bgm_volume: float = 1.0,
+    voice_volume: float = 1.0,
 ) -> str:
     """
     Build the final mixed audio track:
@@ -73,6 +85,12 @@ def build_audio_track(
     print(f"[syncer] placed {placed}/{len(segments)} TTS clips"
           + (f", {truncated} truncated" if truncated else ""))
 
+    # Apply the user's Voice Volume to the whole Khmer track.
+    voice_gain = _vol_to_db(voice_volume)
+    if abs(voice_gain) > 0.01:
+        print(f"[syncer] voice volume {voice_volume:.2f} ({voice_gain:+.1f} dB)")
+        khmer_track = khmer_track + voice_gain
+
     # Drop the original audio entirely: export only the Khmer TTS over silence.
     if remove_original:
         print("[syncer] removing original audio — Khmer voice-over only")
@@ -93,8 +111,14 @@ def build_audio_track(
     if cursor < total_ms:
         regions.append((cursor, total_ms, BG_IDLE_DB))
 
+    # The user's BGM Volume scales the ducked original on top of the per-region
+    # attenuation (0 = silent background, 1.0 = the default ducked level).
+    bgm_gain = _vol_to_db(bgm_volume)
+    if abs(bgm_gain) > 0.01:
+        print(f"[syncer] bgm volume {bgm_volume:.2f} ({bgm_gain:+.1f} dB)")
+
     for a, b, att in regions:
-        piece = original[a:b] - att
+        piece = original[a:b] - att + bgm_gain
         fade = min(FADE_MS, max(0, (b - a) // 2))
         if fade:
             piece = piece.fade_in(fade).fade_out(fade)

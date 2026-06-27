@@ -1,0 +1,29 @@
+# GPU PC override — real voice cloning via in-process VoxCPM2.
+#
+# Use on a machine with an NVIDIA GPU + the NVIDIA Container Toolkit:
+#
+#   VOXCPM_LOCAL_CLONE=1 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+#
+# What it changes vs the base file:
+#   • builds the images with the `voxcpm` package (INSTALL_VOXCPM=1)
+#   • reserves the GPU for the worker (where TTS synthesis runs)
+# Normal voices still use TTS_ENGINE (gtts by default); only segments assigned a
+# recorded/cloned voice are routed to the in-process VoxCPM2 model.
+services:
+  api:
+    build:
+      args:
+        INSTALL_VOXCPM: "1"
+
+  worker:
+    build:
+      args:
+        INSTALL_VOXCPM: "1"
+    # Expose the host GPU to the worker container.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

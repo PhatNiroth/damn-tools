@@ -94,6 +94,30 @@ def save_clone(raw_audio: bytes, label: str, gender: str, prompt_text: str) -> D
     return _public(meta)
 
 
+def update_clone(voice_id: str, gender: Optional[str] = None,
+                 label: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    Update an existing clone's gender and/or label in place. Returns the updated
+    catalog entry, or None if the clone is unknown. Invalid gender values are
+    ignored (the existing one is kept).
+    """
+    if not _is_clone_id(voice_id):
+        return None
+    meta_file = _meta_path(voice_id)
+    if not (meta_file.exists() and _wav_path(voice_id).exists()):
+        return None
+    try:
+        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if gender in ("male", "female"):
+        meta["gender"] = gender
+    if label is not None and label.strip():
+        meta["label"] = label.strip()
+    meta_file.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+    return _public(meta)
+
+
 def _public(meta: Dict[str, Any]) -> Dict[str, Any]:
     """Catalog shape the frontend/voice list consumes."""
     return {

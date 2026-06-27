@@ -49,6 +49,11 @@ header{display:flex;align-items:center;gap:10px;padding:0 16px;height:42px;backg
 .vid-box{width:100%;height:85px;background:#0d0d1a;border:1px dashed var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .vid-box video{width:100%;height:100%;object-fit:cover;display:none}
 .vid-placeholder{font-size:10px;color:var(--muted)}
+/* live burned-subtitle preview overlaid on the video frame */
+.sub-overlay{position:absolute;left:0;right:0;bottom:8px;display:none;text-align:center;padding:0 6%;pointer-events:none;line-height:1.25;font-weight:700;white-space:pre-wrap;word-break:break-word;z-index:3}
+.sub-overlay.show{display:block}
+.vid-box:fullscreen{height:100%;width:100%;background:#000}
+.vid-box:fullscreen video{object-fit:contain}
 
 /* step buttons */
 .sbtn{width:100%;padding:8px;background:var(--card);border:1px solid var(--border);border-radius:5px;color:var(--muted2);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:6px;transition:border-color .15s,color .15s}
@@ -61,6 +66,22 @@ header{display:flex;align-items:center;gap:10px;padding:0 16px;height:42px;backg
 .render-btn:hover{opacity:.9}
 .render-btn:disabled{opacity:.4;cursor:not-allowed}
 .status-bar{padding:7px 12px;font-size:9px;color:var(--muted);font-family:monospace;margin-top:auto;border-top:1px solid var(--border)}
+
+/* RIGHT SIDEBAR — preview / run-test panel */
+.rsidebar{width:420px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.rsidebar::-webkit-scrollbar{width:3px}
+.rsidebar::-webkit-scrollbar-thumb{background:var(--border)}
+.rsidebar .vid-box{height:300px;border-style:solid}
+.rsidebar .vid-box video{object-fit:contain;background:#000}
+.fit-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11px;color:var(--muted2)}
+.fit-row select{flex:1}
+.mix-row{margin-bottom:10px}
+.mix-row .mix-top{display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);margin-bottom:4px}
+.mix-row .mix-val{color:var(--cyan);font-family:monospace}
+.mix-slider{width:100%;height:4px;appearance:none;background:var(--border);border-radius:2px;cursor:pointer}
+.mix-slider::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border-radius:50%;background:var(--purple2)}
+.chk-row{display:flex;align-items:center;gap:8px;padding:7px 2px;cursor:pointer;font-size:11px;color:var(--muted2)}
+.chk-row input{accent-color:var(--purple);width:15px;height:15px}
 
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -192,6 +213,8 @@ input[type=file]{display:none}
 .spk-man{background:rgba(80,140,255,.18);color:#9cc1ff;border:1px solid rgba(80,140,255,.35)}
 .spk-girl{background:rgba(255,110,180,.18);color:#ffaad4;border:1px solid rgba(255,110,180,.35)}
 .spk-none{color:var(--muted);font-size:10px}
+.spk-sel{font-size:10px;font-weight:600;padding:2px 5px;border-radius:8px;cursor:pointer;outline:none}
+.spk-sel.spk-none{background:var(--input-bg);border:1px solid var(--border);color:var(--muted)}
 .speaker-panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin:6px 0 4px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .speaker-panel .sp-title{font-size:10px;font-weight:700;color:var(--purple2);letter-spacing:.5px;margin-right:4px}
 .sp-item{display:flex;align-items:center;gap:5px;background:var(--input-bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px}
@@ -224,24 +247,6 @@ input[type=file]{display:none}
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
-
-  <!-- Video player -->
-  <div class="sec">
-    <div class="sec-title">VIDEO PLAYER</div>
-    <div class="times"><span id="cur-t">00:00.00</span><span id="dur-t">00:00.00</span></div>
-    <input type="range" class="scrubber" id="scrubber" min="0" max="100" value="0" step="0.01"/>
-    <div class="ctrls">
-      <button class="cbtn" id="btn-play">▶</button>
-      <button class="cbtn" id="btn-stop">■</button>
-      <span style="font-size:11px;color:var(--muted2);margin-left:4px">🔊</span>
-      <input type="range" class="vol" id="vol" min="0" max="100" value="80"/>
-    </div>
-    <div class="vid-box" id="vid-box">
-      <span class="vid-placeholder">No video loaded</span>
-      <video id="main-vid" preload="metadata"></video>
-      <audio id="preview-audio" preload="auto" style="display:none"></audio>
-    </div>
-  </div>
 
   <!-- Steps -->
   <div class="sec">
@@ -302,18 +307,23 @@ input[type=file]{display:none}
     <!-- Voice-cloning recorder -->
     <div id="clone-panel" style="display:none;border:1px solid var(--border);border-radius:6px;padding:9px;margin-top:4px;background:var(--card)">
       <div style="font-size:10px;color:var(--muted2);line-height:1.5;margin-bottom:7px">
-        Read the line below aloud, then record ~10–20s of clear speech. Your voice
-        is cloned for Khmer dubbing (VoxCPM engine).
+        Record ~10–20s of clear speech (read the line below), <b>or upload an
+        audio file</b>. Your voice is cloned for Khmer dubbing.
+        <b>Real cloning needs VoxCPM</b> — either a GPU PC running it in-process
+        (<code>VOXCPM_LOCAL_CLONE=1</code>) or a remote endpoint
+        (<code>VOXCPM_BASE_URL</code>). Cloned segments route there; without
+        either they fall back to a default same-gender voice.
       </div>
       <div style="font-size:11px;color:var(--text);background:var(--input-bg);border-radius:4px;padding:6px;margin-bottom:7px">
         <span id="clone-script">នេះជាសំឡេងរបស់ខ្ញុំសម្រាប់ការបញ្ចូលសំឡេងជាភាសាខ្មែរ។</span>
       </div>
       <div style="display:flex;gap:5px;margin-bottom:5px">
         <button class="sbtn" id="clone-rec-btn" style="margin-bottom:0;flex:1" onclick="toggleRecord()">● Record</button>
-        <button class="cbtn" id="clone-play-btn" title="Play recording" onclick="playClone()" disabled>▶</button>
+        <button class="cbtn" id="clone-play-btn" title="Play reference clip" onclick="playClone()" disabled>▶</button>
       </div>
-      <input type="file" id="clone-file-input" accept="audio/*" style="display:none" onchange="onCloneFileSelected(this)"/>
-      <button class="sbtn" style="margin-bottom:7px;font-size:10px;width:100%" onclick="document.getElementById('clone-file-input').click()">📂 Upload audio file instead</button>
+      <button class="sbtn" style="margin-bottom:5px" onclick="document.getElementById('clone-file').click()">⬆ Upload audio file</button>
+      <input type="file" id="clone-file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac" style="display:none" onchange="onCloneFileSelected(this)"/>
+      <div id="clone-src" style="font-size:10px;color:var(--muted2);margin-bottom:7px"></div>
       <input id="clone-label" class="voice-sel" style="width:100%;box-sizing:border-box;margin-bottom:6px" placeholder="Voice name (e.g. My voice)"/>
       <select id="clone-gender" class="voice-sel" style="width:100%;box-sizing:border-box;margin-bottom:6px">
         <option value="female">♀ Female</option>
@@ -325,41 +335,26 @@ input[type=file]{display:none}
     </div>
   </div>
 
-  <!-- Render -->
+  <!-- Render — advanced: cover original burned-in subtitles -->
   <div class="sec">
-    <label style="display:flex;align-items:center;gap:7px;padding:7px 4px;cursor:pointer;font-size:11px;color:var(--muted2)">
-      <input type="checkbox" id="burn-subs" style="accent-color:var(--purple);width:14px;height:14px" onchange="document.getElementById('sub-style-row').style.display=this.checked?'flex':'none'"/>
-      🔤 Burn Khmer subtitles into video
+    <label style="display:flex;align-items:center;gap:7px;padding:7px 4px;cursor:pointer;font-size:11px;color:var(--muted2)" title="Remove the original burned-in (Chinese/English) subtitles. Defaults to a full-width band across the bottom of the frame.">
+      <input type="checkbox" id="remove-subs" style="accent-color:var(--purple);width:14px;height:14px" onchange="document.getElementById('remove-style-row').style.display=this.checked?'block':'none'"/>
+      🟥 Remove original subtitles
     </label>
-    <div class="style-row" id="sub-style-row" style="display:none">
-      Size <input type="number" id="sub-size" min="10" max="72" value="22"/>
-      Color <input type="color" id="sub-color" value="#ffffff"/>
-      Outline <input type="number" id="sub-outline" min="0" max="6" value="2"/>
-      Height <input type="number" id="sub-margin" min="0" max="400" value="40" title="Distance from the bottom edge (px). Higher = subtitle sits higher up."/>
-    </div>
-    <label style="display:flex;align-items:center;gap:7px;padding:7px 4px;cursor:pointer;font-size:11px;color:var(--muted2)" title="Cover the original burned-in (Chinese/English) subtitles with a solid bar. Defaults to a full-width band across the bottom of the frame.">
-      <input type="checkbox" id="remove-subs" style="accent-color:var(--purple);width:14px;height:14px" onchange="document.getElementById('remove-style-row').style.display=this.checked?'flex':'none'"/>
-      🟥 Cover original subtitles with a bar
-    </label>
-    <div class="style-row" id="remove-style-row" style="display:none" title="Bar position/size as a percentage of the frame (origin = top-left).">
+    <div class="style-row" id="remove-style-row" style="display:none" title="Region position/size as a percentage of the frame (origin = top-left).">
+      <div style="margin-bottom:6px" title="Erase = reconstruct the area from surrounding pixels (text disappears, no patch; best on plain/blurred backgrounds). Bar = paint a solid color over it (always opaque, but a visible block).">
+        Mode
+        <select id="rm-mode" onchange="document.getElementById('rm-color-wrap').style.display=this.value==='bar'?'inline':'none'">
+          <option value="erase">Erase (reconstruct)</option>
+          <option value="bar">Cover bar (solid color)</option>
+        </select>
+      </div>
       X <input type="number" id="rm-x" min="0" max="100" value="0"/>
       Y <input type="number" id="rm-y" min="0" max="100" value="82"/>
       W <input type="number" id="rm-w" min="0" max="100" value="100"/>
       H <input type="number" id="rm-h" min="0" max="100" value="16"/>
-      Color <input type="color" id="rm-color" value="#ffffff"/>
+      <span id="rm-color-wrap" style="display:none">Color <input type="color" id="rm-color" value="#ffffff"/></span>
     </div>
-    <label style="display:flex;align-items:center;gap:7px;padding:7px 4px;cursor:pointer;font-size:11px;color:var(--muted2)" title="Drop the original Chinese audio entirely — the final video carries only the Khmer voice-over (no ducked background)">
-      <input type="checkbox" id="remove-audio" checked style="accent-color:var(--purple);width:14px;height:14px"/>
-      🔇 Remove original sound (Khmer voice only)
-    </label>
-    <button class="render-btn" id="preview-btn" onclick="previewDub()" disabled
-            title="Generate the Khmer voice and mix it over the original — without re-encoding the video. Plays in the player so you can check quality before the full render."
-            style="background:linear-gradient(90deg,#0ea5e9,#22c55e);margin-bottom:6px">
-      🎧 PREVIEW DUB (សាកល្បងស្តាប់)
-    </button>
-    <button class="render-btn" id="render-btn" onclick="finalRender()" disabled>
-      🚀 FINAL RENDER (ដំណើរការផ្សាយ)
-    </button>
   </div>
 
   <!-- Projects -->
@@ -465,6 +460,80 @@ input[type=file]{display:none}
   </div>
 
 </div><!-- /main -->
+
+<!-- RIGHT SIDEBAR — preview & run-test -->
+<aside class="rsidebar">
+
+  <!-- Preview player -->
+  <div class="sec">
+    <div class="sec-title">PREVIEW &amp; TEST</div>
+    <div class="vid-box" id="vid-box">
+      <span class="vid-placeholder">No video loaded</span>
+      <video id="main-vid" preload="metadata"></video>
+      <div id="sub-overlay" class="sub-overlay"></div>
+      <audio id="preview-audio" preload="auto" style="display:none"></audio>
+    </div>
+    <div class="ctrls" style="margin-top:8px">
+      <button class="cbtn" id="btn-play">▶</button>
+      <button class="cbtn" id="btn-stop">■</button>
+      <button class="cbtn" id="btn-full" title="Fullscreen">⛶</button>
+      <span style="font-size:11px;color:var(--muted2);margin-left:4px">🔊</span>
+      <input type="range" class="vol" id="vol" min="0" max="100" value="80"/>
+    </div>
+    <input type="range" class="scrubber" id="scrubber" min="0" max="100" value="0" step="0.01" style="margin-top:8px"/>
+    <div class="times"><span id="cur-t">00:00.00</span><span id="dur-t">00:00.00</span></div>
+  </div>
+
+  <!-- Run / preview controls -->
+  <div class="sec">
+    <div class="fit-row">
+      <span>Preview fit</span>
+      <select id="fit-mode" class="voice-sel" onchange="setFitMode(this.value)">
+        <option value="contain">Auto (match video)</option>
+        <option value="cover">Fill (crop)</option>
+        <option value="fill">Stretch</option>
+      </select>
+    </div>
+    <button class="render-btn" id="preview-btn" onclick="previewDub()" disabled
+            title="Generate the Khmer voice and mix it over the original — without re-encoding the video. Plays here so you can check quality before the full render."
+            style="background:linear-gradient(90deg,#0ea5e9,#22c55e);margin-bottom:8px">
+      ▶ Preview (video + dub)
+    </button>
+    <label class="chk-row" title="Drop the original Chinese audio — the dub carries only the Khmer voice-over (no ducked background).">
+      <input type="checkbox" id="remove-audio" checked/>
+      Mute original audio
+    </label>
+
+    <div class="sec-title" style="margin-top:10px">AUDIO MIXING</div>
+    <div class="mix-row">
+      <div class="mix-top"><span>BGM Volume</span><span class="mix-val" id="bgm-val">50%</span></div>
+      <input type="range" class="mix-slider" id="bgm-vol" min="0" max="100" value="50"
+             oninput="document.getElementById('bgm-val').textContent=this.value+'%'"/>
+    </div>
+    <div class="mix-row">
+      <div class="mix-top"><span>Voice Volume</span><span class="mix-val" id="voice-val">100%</span></div>
+      <input type="range" class="mix-slider" id="voice-vol" min="0" max="200" value="100"
+             oninput="document.getElementById('voice-val').textContent=this.value+'%'"/>
+    </div>
+    <div style="font-size:9px;color:var(--muted);margin:-2px 0 8px">Mix levels apply on Preview / Final Render.</div>
+
+    <label class="chk-row" title="Burn the Khmer subtitles into the final video.">
+      <input type="checkbox" id="burn-subs" onchange="document.getElementById('sub-style-row').style.display=this.checked?'flex':'none'"/>
+      Burn subtitles into video
+    </label>
+    <div class="style-row" id="sub-style-row" style="display:none">
+      Size <input type="number" id="sub-size" min="10" max="72" value="22"/>
+      Color <input type="color" id="sub-color" value="#ffffff"/>
+      Outline <input type="number" id="sub-outline" min="0" max="6" value="2"/>
+      Height <input type="number" id="sub-margin" min="0" max="400" value="40" title="Distance from the bottom edge (px). Higher = subtitle sits higher up."/>
+    </div>
+
+    <button class="render-btn" id="render-btn" onclick="finalRender()" disabled style="margin-top:8px">
+      🚀 FINAL RENDER (ដំណើរការផ្សាយ)
+    </button>
+  </div>
+
+</aside>
 </div><!-- /workspace -->
 
 <!-- Progress overlay -->
@@ -551,6 +620,7 @@ let videoFilename = null;
 let videoJobId    = null;
 let lastRenderUrl = null;   // URL of the most recent full dubbed render (for playback/download)
 let previewMode = false;    // true while playing an audio-only dub preview (video muted, sound from <audio>)
+let renderedDubPlaying = false;  // true while playing the finished MP4 (subs already burned in — skip overlay)
 let duration = 0;
 let projectId   = null;
 let projectName = '';
@@ -595,10 +665,23 @@ function voiceOptions(selected) {
 const SPEAKER_LABELS = {man_1:'Man 1', man_2:'Man 2', man_3:'Man 3', girl:'Girl'};
 function speakerGender(spk) { return spk === 'girl' ? 'female' : 'male'; }
 function speakerLabel(spk)  { return SPEAKER_LABELS[spk] || spk; }
-function speakerBadge(seg) {
-  if (!seg.speaker) return '<span class="spk-none">—</span>';
-  const cls = seg.speaker === 'girl' ? 'spk-girl' : 'spk-man';
-  return `<span class="spk-badge ${cls}">${speakerLabel(seg.speaker)}</span>`;
+// Editable speaker picker — detection (man_1/2/3 / girl) is often wrong, so let
+// the user switch a segment's speaker by hand. Changing it re-runs the panel.
+const SPEAKER_OPTIONS = ['man_1','man_2','man_3','girl'];
+function speakerSelect(seg, i) {
+  const cur = seg.speaker || '';
+  const cls = seg.speaker === 'girl' ? 'spk-girl' : (seg.speaker ? 'spk-man' : 'spk-none');
+  let opts = `<option value=""${cur?'':' selected'}>—</option>`;
+  for (const spk of SPEAKER_OPTIONS) {
+    opts += `<option value="${spk}"${cur===spk?' selected':''}>${speakerLabel(spk)}</option>`;
+  }
+  return `<select class="spk-sel ${cls}" onclick="event.stopPropagation()"
+            onchange="setSpeakerForSeg(${i}, this.value)">${opts}</select>`;
+}
+// Set one segment's speaker (manual correction of the diarizer).
+function setSpeakerForSeg(i, spk) {
+  segs[i].speaker = spk || null;
+  renderTable(); renderTimeline(); scheduleSave();
 }
 // Distinct speakers present, in a stable order (man_1, man_2, man_3, girl).
 function distinctSpeakers() {
@@ -713,6 +796,7 @@ async function toggleRecord() {
       btn.classList.remove('busy');
       document.getElementById('clone-play-btn').disabled = false;
       document.getElementById('clone-save-btn').disabled = false;
+      document.getElementById('clone-src').textContent = '🎙 Recording captured';
       toast('Recording captured','ok');
     };
     mediaRecorder.start();
@@ -740,8 +824,21 @@ function playClone() {
   cloneAudio.play();
 }
 
+// Use an uploaded audio file as the cloning reference instead of recording.
+function onCloneFileSelected(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  cloneBlob = f;
+  document.getElementById('clone-play-btn').disabled = false;
+  document.getElementById('clone-save-btn').disabled = false;
+  document.getElementById('clone-src').textContent =
+    `📄 ${f.name} (${(f.size/1024/1024).toFixed(1)} MB) ready`;
+  input.value = '';   // allow re-selecting the same file later
+  toast('Audio file loaded','ok');
+}
+
 async function saveClone() {
-  if (!cloneBlob) { toast('Record something first','err'); return; }
+  if (!cloneBlob) { toast('Record or upload an audio file first','err'); return; }
   const btn = document.getElementById('clone-save-btn');
   const fd = new FormData();
   const ext = (cloneBlob.type.split('/')[1] || 'webm').split(';')[0];
@@ -760,6 +857,7 @@ async function saveClone() {
     document.getElementById('voice-pick').value = voice.id;
     cloneBlob = null;
     document.getElementById('clone-play-btn').disabled = true;
+    document.getElementById('clone-src').textContent = '';
     toast(`Saved voice "${voice.label}"`,'ok');
   } catch(e) { toast('Save failed: '+e.message,'err'); }
   btn.disabled = false; btn.textContent = '💾 Save cloned voice';
@@ -901,6 +999,8 @@ function attachVideo(url) {
 // Load the finished dubbed video into the main player and play it end-to-end.
 function playFullDub(outputFile) {
   if (!outputFile) { toast('No rendered output to play', 'err'); return; }
+  renderedDubPlaying = true;                // this MP4 may have subs already burned in — suppress the HTML overlay
+  document.getElementById('sub-overlay').classList.remove('show');
   const url = `/api/download/${outputFile}`;
   attachVideo(url);                         // swaps the player source to the dubbed MP4
   vid.onloadeddata = () => {                // wait until it's playable, then run the whole thing
@@ -915,6 +1015,7 @@ function playFullDub(outputFile) {
 function onVideoSelected(input) {
   const file = input.files[0]; if (!file) return;
   exitPreview();
+  renderedDubPlaying = false;
   attachVideo(URL.createObjectURL(file));
 
   // A newly loaded video starts a fresh project
@@ -945,6 +1046,14 @@ document.getElementById('btn-play').onclick = () => {
   else            { vid.pause(); document.getElementById('btn-play').textContent = '▶'; }
 };
 document.getElementById('btn-stop').onclick = () => { vid.pause(); vid.currentTime = 0; document.getElementById('btn-play').textContent = '▶'; };
+document.getElementById('btn-full').onclick = () => {
+  // Fullscreen the whole box (not just the <video>) so the live subtitle overlay shows too.
+  const box = document.getElementById('vid-box');
+  if (document.fullscreenElement) document.exitFullscreen();
+  else (box.requestFullscreen ? box.requestFullscreen() : box.webkitRequestFullscreen?.());
+};
+// How the video frame fits its box (contain / cover / stretch).
+function setFitMode(mode) { vid.style.objectFit = mode || 'contain'; }
 document.getElementById('vol').oninput = function() {
   vid.volume = this.value / 100;
   document.getElementById('preview-audio').volume = this.value / 100;   // in preview the video is muted
@@ -974,7 +1083,59 @@ vid.ontimeupdate = () => {
   // Highlight active segment
   const ai = segs.findIndex(s => t >= s.start && t <= s.end);
   if (ai >= 0 && ai !== selIdx) selectSeg(ai);
+  // Live burned-subtitle preview overlaid on the video frame
+  updateSubOverlay(t);
 };
+
+// Draw the Khmer subtitle of the segment active at time `t` on top of the video,
+// styled to match the FINAL RENDER burn settings (size/color/outline/height).
+// Only shown when "Burn subtitles into video" is enabled, so the preview reflects
+// exactly what the rendered video will look like — without re-encoding.
+function updateSubOverlay(t) {
+  const ov = document.getElementById('sub-overlay');
+  if (!ov) return;
+  const on = document.getElementById('burn-subs').checked;
+  if (!on || renderedDubPlaying) { ov.classList.remove('show'); return; }
+  const seg = segs.find(s => t >= s.start && t <= s.end);
+  const txt = seg && (seg.khmer || seg.text);
+  if (!txt) { ov.classList.remove('show'); ov.textContent = ''; return; }
+
+  // Map the native-resolution burn settings to the on-screen preview size.
+  // The font_size / margin_v are in pixels at the video's native height, so we
+  // scale them by how large the video is actually drawn inside its (contain) box.
+  const vh = vid.videoHeight || 0, vw = vid.videoWidth || 0;
+  const box = document.getElementById('vid-box');
+  let scale = 1, letterboxV = 0;
+  if (vh && vw) {
+    const ratio = Math.min(box.clientWidth / vw, box.clientHeight / vh);
+    scale = ratio;
+    letterboxV = Math.max(0, (box.clientHeight - vh * ratio) / 2);
+  }
+  const size    = (+document.getElementById('sub-size').value   || 22) * scale;
+  const color   = document.getElementById('sub-color').value || '#ffffff';
+  const outline = (+document.getElementById('sub-outline').value|| 2)  * scale;
+  const marginV = (+document.getElementById('sub-margin').value || 40) * scale;
+  const ow = Math.max(0, outline);
+  ov.textContent = txt;
+  ov.style.fontSize = Math.max(8, size) + 'px';
+  ov.style.color    = color;
+  ov.style.bottom   = (letterboxV + marginV) + 'px';
+  // Approximate ffmpeg's outline with a multi-directional black text-shadow.
+  ov.style.textShadow = ow > 0
+    ? [[ow,0],[-ow,0],[0,ow],[0,-ow],[ow,ow],[-ow,-ow],[ow,-ow],[-ow,ow]]
+        .map(([x,y]) => `${x}px ${y}px 0 #000`).join(',')
+    : 'none';
+  ov.classList.add('show');
+}
+
+// Re-render the overlay live as the user tweaks the burn-subtitle controls.
+['burn-subs','sub-size','sub-color','sub-outline','sub-margin'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', () => updateSubOverlay(vid.currentTime || 0));
+});
+// Box size changes (resize / entering or leaving fullscreen) → rescale the overlay.
+window.addEventListener('resize', () => updateSubOverlay(vid.currentTime || 0));
+document.addEventListener('fullscreenchange', () => updateSubOverlay(vid.currentTime || 0));
 
 // ─── SRT IMPORT ──────────────────────────────────────────────────────────────
 function onSRTImport(input) {
@@ -1123,7 +1284,7 @@ function renderTable() {
             onchange="kmEdited(${i}, this)"
             oninput="autoH(this);segs[${i}].khmer=this.value"
           >${seg.khmer||''}</textarea></td>
-      <td>${speakerBadge(seg)}</td>
+      <td>${speakerSelect(seg, i)}</td>
       <td>${voiceSel}</td>
       <td><div class="audio-cell">
         ${seg.audioUrl ? `<audio class="mini-audio" controls src="${seg.audioUrl}"></audio>` : ''}
@@ -1255,6 +1416,8 @@ async function previewDub() {
         filename:     videoFilename,
         segments:     segs.map(s=>({start:s.start,end:s.end,text:s.text,khmer:s.khmer,gender:s.gender||'female',voice:segVoice(s)})),
         remove_audio: document.getElementById('remove-audio').checked,
+        bgm_volume:   (+document.getElementById('bgm-vol').value   || 0) / 100,
+        voice_volume: (+document.getElementById('voice-vol').value || 0) / 100,
       }),
     });
     const d = await r.json();
@@ -1269,6 +1432,7 @@ function playPreview(audioFile) {
   if (!audioFile) { toast('No preview audio produced','err'); return; }
   const a = document.getElementById('preview-audio');
   previewMode = true;
+  renderedDubPlaying = false;               // original frames → let the live subtitle overlay show
   a.src = `/api/download/${audioFile}`;
   attachVideo('/api/video/' + videoFilename);   // back to the ORIGINAL video frames
   vid.muted = true;                             // all sound now comes from the dub track
@@ -1308,8 +1472,11 @@ async function finalRender() {
           w: (+document.getElementById('rm-w').value || 0)  / 100,
           h: (+document.getElementById('rm-h').value || 0)  / 100,
         },
+        remove_mode:  document.getElementById('rm-mode').value,
         remove_color: document.getElementById('rm-color').value,
         remove_audio: document.getElementById('remove-audio').checked,
+        bgm_volume:   (+document.getElementById('bgm-vol').value   || 0) / 100,
+        voice_volume: (+document.getElementById('voice-vol').value || 0) / 100,
         sub_style: {
           font_size:  +document.getElementById('sub-size').value || 22,
           font_color: document.getElementById('sub-color').value.replace('#',''),

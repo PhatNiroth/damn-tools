@@ -422,7 +422,8 @@ def download(filename: str):
 
 # ── FRONTEND ──────────────────────────────────────────────────────────────────
 
-frontend_dir = Path(__file__).parent / "frontend"
+_here = Path(__file__).parent
+frontend_dir = _here / "frontend" if (_here / "frontend").exists() else _here.parent / "frontend"
 
 @api.get("/")
 def serve_index():

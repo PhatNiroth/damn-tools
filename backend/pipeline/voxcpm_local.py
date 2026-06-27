@@ -70,32 +70,116 @@ def _get_model():
         print(f"[voxcpm_local] loading {VOXCPM_LOCAL_MODEL} on {device} …")
         try:
             _model = VoxCPM.from_pretrained(VOXCPM_LOCAL_MODEL, device=device)
-        except TypeError:
-            # Older builds infer the device themselves (no `device` kwarg).
+        except Exception:
+            # Some builds infer device themselves or need .to() after loading.
             _model = VoxCPM.from_pretrained(VOXCPM_LOCAL_MODEL)
+            try:
+                import torch
+                if device == "cuda" and torch.cuda.is_available():
+                    _model = _model.to(device)
+            except Exception:
+                pass
         print("[voxcpm_local] model ready.")
     return _model
+
+
+def _collect_wav(result) -> "np.ndarray":
+    """
+    Normalise model output to a 1-D float32 numpy array.
+
+    VoxCPM2/CosyVoice-family models may return:
+      - a single torch Tensor or numpy array
+      - a generator of chunks, each a raw Tensor/array or a dict
+        like {'tts_speech': Tensor} (CosyVoice streaming style)
+    """
+    import numpy as np
+
+    try:
+        import torch
+        _is_tensor = lambda x: isinstance(x, torch.Tensor)
+        _to_np = lambda x: x.detach().cpu().numpy()
+    except ImportError:
+        _is_tensor = lambda x: False
+        _to_np = lambda x: x
+
+    def _as_np(chunk):
+        if isinstance(chunk, dict):
+            for key in ("tts_speech", "wav", "audio"):
+                if key in chunk:
+                    chunk = chunk[key]
+                    break
+            else:
+                chunk = next(iter(chunk.values()))
+        if _is_tensor(chunk):
+            chunk = _to_np(chunk)
+        return np.asarray(chunk, dtype=np.float32).squeeze()
+
+    # A plain Tensor or dict must go through _as_np directly — both are
+    # technically iterable but should NOT be consumed as generators.
+    if _is_tensor(result) or isinstance(result, (dict, np.ndarray, bytes, bytearray)):
+        return _as_np(result)
+
+    # Generator / iterator (CosyVoice streaming style)
+    if hasattr(result, "__next__") or hasattr(result, "__iter__"):
+        chunks = [_as_np(c) for c in result]
+        if not chunks:
+            raise RuntimeError("[voxcpm_local] model returned empty generator")
+        return np.concatenate(chunks)
+
+    return _as_np(result)
 
 
 def _generate_wav(text: str, ref_wav_path: str, ref_text: str) -> bytes:
     """
     Run the model and return WAV bytes. ISOLATED so the VoxCPM API call is the
     only thing to adjust if the installed package's signature differs.
+
+    Tries the file-path API first; if the build doesn't accept prompt_wav_path,
+    loads the reference audio as a tensor and retries with prompt_speech_16k
+    (the CosyVoice convention used by some VoxCPM2 builds).
     """
     import numpy as np
     model = _get_model()
-    wav = model.generate(
-        text=text,
-        prompt_wav_path=ref_wav_path or None,
-        prompt_text=ref_text or None,
-    )
-    # `generate` returns a float waveform (numpy/torch) at model.sample_rate.
-    sr = int(getattr(model, "sample_rate", 16000))
-    if hasattr(wav, "detach"):          # torch tensor → numpy
-        wav = wav.detach().cpu().numpy()
-    wav = np.asarray(wav, dtype=np.float32).squeeze()
-    pcm = (np.clip(wav, -1.0, 1.0) * 32767.0).astype("<i2").tobytes()
+    sr = int(getattr(model, "sample_rate", 22050))
 
+    ref_path = ref_wav_path or None
+    ref_txt  = ref_text or None
+
+    # Wrap only model.generate() in the TypeError guard so that errors from
+    # _collect_wav do not incorrectly trigger the fallback API path.
+    try:
+        result = model.generate(
+            text=text,
+            prompt_wav_path=ref_path,
+            prompt_text=ref_txt,
+        )
+    except TypeError:
+        # Build uses prompt_speech_16k (CosyVoice convention) instead of a path.
+        ref_tensor = None
+        if ref_path:
+            try:
+                import soundfile as sf
+                import torch
+                ref_audio, _ = sf.read(ref_path, dtype="float32")
+                # Move to the model's device — required when model is on CUDA.
+                model_device = next(model.parameters()).device
+                ref_tensor = torch.from_numpy(ref_audio).unsqueeze(0).to(model_device)
+            except Exception:
+                pass
+        result = model.generate(
+            text=text,
+            prompt_speech_16k=ref_tensor,
+            prompt_text=ref_txt,
+        )
+    wav = _collect_wav(result)
+
+    if wav.size == 0:
+        raise RuntimeError("[voxcpm_local] model generated zero-length audio")
+
+    # NaN/Inf can appear from GPU computation; replace with silence.
+    wav = np.nan_to_num(wav, nan=0.0, posinf=0.0, neginf=0.0)
+
+    pcm = (np.clip(wav, -1.0, 1.0) * 32767.0).astype("<i2").tobytes()
     buf = io.BytesIO()
     with wave.open(buf, "wb") as w:
         w.setnchannels(1)
@@ -125,7 +209,7 @@ def _ensure_default_ref(gender: str) -> Tuple[str, str]:
         profile = VOICES[DEFAULT_GTTS_VOICE.get(gender, "female_1")]
         wav_bytes = _to_wav(mp3, profile)        # apply gender pitch/EQ, no stretch
         path.write_bytes(wav_bytes)
-        print(f"[voxcpm_local] bootstrapped default {gender} reference → {path}")
+        print(f"[voxcpm_local] bootstrapped default {gender} reference -> {path}")
     return str(path), _DEFAULT_REF_TEXT
 
 
